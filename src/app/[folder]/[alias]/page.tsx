@@ -4,6 +4,7 @@ import {
 	getMDByAlias
 } from '@/lib/mdUtils'
 import MarkdownContent from '@/components/MarkdownContent'
+import SpeechControls from '@/components/SpeechControls'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import './page.css'
@@ -70,6 +71,8 @@ export default async function ContentPage({ params }: PageProps) {
 						/>
 					</svg>
 				</Link>
+
+				<SpeechControls />
 			</div>
 
 			<article className='prose lg:prose-xl mx-auto'>
