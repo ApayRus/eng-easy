@@ -10,7 +10,7 @@
 
 .back-link a {
 	font-size: 0.875rem;
-	color: #2563eb;
+	color: var(--primary);
 	text-decoration: none;
 }
 
@@ -22,13 +22,15 @@
 	font-size: 1.5rem;
 	font-weight: 700;
 	margin-bottom: 2rem;
+	color: var(--foreground);
 }
 
 .lessons-container {
-	background-color: white;
+	background-color: var(--card-bg);
 	border-radius: 0.5rem;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	padding: 2rem;
+	border: 1px solid var(--border);
 }
 
 .lessons-list {
@@ -39,7 +41,7 @@
 
 .lesson-item {
 	padding-bottom: 1.5rem;
-	border-bottom: 1px solid #e5e7eb;
+	border-bottom: 1px solid var(--border);
 }
 
 .lesson-item:last-child {
@@ -51,17 +53,17 @@
 	display: block;
 	font-size: 1.25rem;
 	font-weight: 600;
-	color: #2563eb;
+	color: var(--primary);
 	text-decoration: none;
 	transition: color 0.2s;
 }
 
 .lesson-link:hover {
-	color: #1e40af;
+	color: var(--primary-dark);
 	text-decoration: underline;
 }
 
 .no-content {
-	color: #6b7280;
+	color: var(--muted);
 	text-align: center;
 }

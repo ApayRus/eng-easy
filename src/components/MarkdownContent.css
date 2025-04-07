@@ -19,6 +19,11 @@
 	margin: 1rem 0;
 }
 
+.markdown-content h1:first-child {
+	margin-top: 1.5rem;
+	padding-top: 0.5rem;
+}
+
 .markdown-content h2 {
 	font-size: 1.2rem;
 	font-weight: bold;
@@ -161,6 +166,52 @@
 	font-weight: 600;
 }
 
+/* Темный режим - поддержка ночной темы */
+@media (prefers-color-scheme: dark) {
+	.info-content {
+		color: rgba(255, 255, 255, 0.87);
+	}
+
+	.info-content h1,
+	.info-content h2,
+	.info-content h3,
+	.info-content h4,
+	.info-content h5,
+	.info-content h6 {
+		color: rgba(255, 255, 255, 0.95);
+	}
+
+	.info-content h1 {
+		border-bottom-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.info-content a {
+		color: #60a5fa; /* Более светлый синий для темного фона */
+	}
+
+	.info-content blockquote {
+		border-left-color: rgba(255, 255, 255, 0.2);
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	.info-content pre {
+		background-color: rgba(0, 0, 0, 0.2);
+	}
+
+	.info-content code {
+		background-color: rgba(0, 0, 0, 0.2);
+	}
+
+	.info-content table th,
+	.info-content table td {
+		border-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.info-content table th {
+		background-color: rgba(0, 0, 0, 0.2);
+	}
+}
+
 /* Language switcher styles */
 .language-switcher {
 	position: absolute;
@@ -242,25 +293,52 @@
 	line-height: 1;
 }
 
+/* Темный режим для элементов интерфейса */
+@media (prefers-color-scheme: dark) {
+	.language-dropdown-toggle {
+		background-color: #1f2937;
+		border-color: #374151;
+		color: white;
+	}
+
+	.language-dropdown-toggle:hover {
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+	}
+
+	.dropdown-arrow {
+		color: #d1d5db;
+	}
+
+	.language-dropdown-menu {
+		background-color: #1f2937;
+		border-color: #374151;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+	}
+
+	.flag-button:hover {
+		background-color: #374151;
+	}
+}
+
 /* Стили для перевода */
 .translations-toggle {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	width: 100%;
-	color: #4b5563;
+	color: var(--secondary);
 	font-weight: 500;
 	padding: 10px 16px;
-	background-color: #f3f4f6;
+	background-color: var(--card-bg);
 	border-radius: 6px;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--border);
 	cursor: pointer;
 	user-select: none;
 	text-align: left;
 }
 
 .translations-toggle:hover {
-	background-color: #e5e7eb;
+	background-color: var(--hover-bg);
 }
 
 .chevron-icon {
@@ -274,9 +352,9 @@
 }
 
 .translations-content {
-	background-color: #f9fafb;
+	background-color: var(--card-bg);
 	padding: 16px;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--border);
 	border-top: none;
 	border-bottom-left-radius: 6px;
 	border-bottom-right-radius: 6px;
@@ -291,7 +369,7 @@
 }
 
 .russian-line {
-	color: #4b5563;
+	color: var(--secondary);
 	margin: 0;
 }
 
@@ -299,17 +377,18 @@
 .audio-text-block {
 	margin-bottom: 2rem;
 	padding: 1rem;
-	background-color: #f9f9f9;
+	background-color: var(--card-bg);
 	border-radius: 0.5rem;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	border: 1px solid var(--border);
 }
 
 .audio-text-block .section-title {
 	font-size: 1.25rem;
 	font-weight: 600;
 	margin-bottom: 1rem;
-	color: #555;
-	border-bottom: 2px solid #e0e0e0;
+	color: var(--secondary);
+	border-bottom: 2px solid var(--border);
 	padding-bottom: 0.5rem;
 }
 
@@ -321,7 +400,7 @@
 	font-size: 1.25rem;
 	font-weight: 600;
 	margin-bottom: 1rem;
-	color: #555;
+	color: var(--secondary);
 }
 
 .english-lines {

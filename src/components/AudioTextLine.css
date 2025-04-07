@@ -12,7 +12,7 @@
 .line-container {
 	padding: 8px;
 	border-radius: 8px;
-	background-color: #f8f9fa;
+	background-color: var(--card-bg);
 	transition: background-color 0.2s ease;
 	width: 100%;
 	box-sizing: border-box;
@@ -32,7 +32,7 @@
 .english-text {
 	font-size: 1.125rem;
 	font-weight: 500;
-	color: #2563eb; /* Blue */
+	color: var(--primary);
 	word-break: break-word;
 	max-width: 100%;
 	overflow-wrap: break-word;
@@ -64,7 +64,7 @@
 }
 
 .separator {
-	color: #9ca3af; /* Gray */
+	color: var(--muted);
 	font-weight: 300;
 	white-space: nowrap;
 	flex-shrink: 0;
@@ -78,14 +78,14 @@
 }
 
 .audio-text-line-interactive:hover .line-container {
-	background-color: #e5e7eb;
+	background-color: var(--hover-bg);
 	transform: translateY(-1px);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .audio-text-line-interactive.speaking .line-container {
-	background-color: #dbeafe; /* Light blue background */
-	border-left: 3px solid #2563eb; /* Blue left border */
+	background-color: var(--primary-light);
+	border-left: 3px solid var(--primary);
 	animation: pulse 2s infinite;
 }
 

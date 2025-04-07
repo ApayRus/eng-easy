@@ -10,22 +10,25 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	border-bottom: 1px solid #e9ecef;
+	border-bottom: 1px solid var(--border);
 	height: 56px; /* Уменьшенная высота для верхней панели */
-	background-color: #f8f9fa;
+	background-color: var(--card-bg);
+	position: sticky;
+	top: 0;
+	z-index: 10;
 }
 
 .home-link {
 	display: flex;
 	align-items: center;
-	color: #495057;
+	color: var(--secondary);
 	transition: color 0.2s;
 	margin-left: 5px;
 	flex-shrink: 0; /* Предотвращаем сжатие иконки дома */
 }
 
 .home-link:hover {
-	color: #0275d8;
+	color: var(--primary);
 }
 
 .home-icon {
@@ -35,8 +38,15 @@
 
 /* Добавляем отступ для статьи */
 article.prose {
-	/* padding: 20px; */
+	padding-top: 25px; /* Увеличенный отступ сверху */
 	margin-top: 10px;
+}
+
+/* Стиль для первого заголовка в статье */
+article.prose h1:first-child,
+article.prose h2:first-child,
+article.prose h3:first-child {
+	padding-top: 20px; /* Дополнительный отступ для первого заголовка */
 }
 
 /* Адаптивные стили */
@@ -55,7 +65,7 @@ article.prose {
 	}
 
 	article.prose {
-		/* padding: 15px; */
+		padding-top: 20px; /* Меньший отступ для маленьких экранов */
 		margin-top: 15px;
 	}
 }
