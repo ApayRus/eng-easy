@@ -5,6 +5,7 @@ import {
 } from '@/lib/mdUtils'
 import MarkdownContent from '@/components/MarkdownContent'
 import SpeechControls from '@/components/SpeechControls'
+import SpeechAvailabilityCheck from '@/components/SpeechAvailabilityCheck'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import './page.css'
@@ -74,6 +75,9 @@ export default async function ContentPage({ params }: PageProps) {
 
 				<SpeechControls />
 			</div>
+
+			{/* Проверка доступности озвучивания и предупреждение если недоступно */}
+			<SpeechAvailabilityCheck />
 
 			<article className='prose lg:prose-xl mx-auto'>
 				<MarkdownContent

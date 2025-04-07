@@ -69,3 +69,16 @@ article.prose h3:first-child {
 		margin-top: 15px;
 	}
 }
+
+/* Стили для предупреждения о недоступности озвучивания на странице */
+.speech-warning-banner {
+	max-width: 65ch;
+	margin: 0 auto 1.5rem;
+	border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+	.speech-warning-banner {
+		margin: 0 1rem 1rem;
+	}
+}

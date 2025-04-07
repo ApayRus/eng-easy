@@ -86,7 +86,6 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const [isSpeaking, setIsSpeaking] = useState(false)
 	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
 	const [speechAvailable, setSpeechAvailable] = useState(false) // Изначально false для SSR
-	const [showWarning, setShowWarning] = useState(false) // Для контроля отображения баннера
 
 	// Split the text into sections
 	const sections = text.split(' / ').map(section => section.trim())
@@ -150,16 +149,6 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		}
 	}, [isClient])
 
-	// Проверка должна ли отображаться предупреждение
-	useEffect(() => {
-		if (isClient && !speechAvailable && typeof document !== 'undefined') {
-			const warningExists = document.querySelector(
-				'[data-speech-warning="true"]'
-			)
-			setShowWarning(!warningExists)
-		}
-	}, [isClient, speechAvailable])
-
 	// Инициализация клиентского состояния и проверка Speech API
 	useEffect(() => {
 		setIsClient(true)
@@ -220,6 +209,7 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const speakText = () => {
 		// Если озвучивание недоступно, ничего не делаем
 		if (!isClient || !speechAvailable) {
+			console.warn('Speech synthesis not available when trying to speak')
 			return
 		}
 
@@ -353,35 +343,6 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		}
 	}
 
-	// Компонент для отображения баннера с предупреждением
-	/**
-	 * Компонент отображения предупреждения о недоступности озвучивания
-	 * Показывает информативный баннер с иконкой предупреждения
-	 * @returns JSX элемент с предупреждением
-	 */
-	const SpeechUnavailableWarning = () => (
-		<div className='speech-warning-banner'>
-			<div className='warning-content'>
-				<svg
-					xmlns='http://www.w3.org/2000/svg'
-					width='20'
-					height='20'
-					viewBox='0 0 24 24'
-					fill='none'
-					stroke='currentColor'
-					strokeWidth='2'
-					strokeLinecap='round'
-					strokeLinejoin='round'
-				>
-					<path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'></path>
-					<line x1='12' y1='9' x2='12' y2='13'></line>
-					<line x1='12' y1='17' x2='12.01' y2='17'></line>
-				</svg>
-				<span>Озвучивание не работает в вашем браузере</span>
-			</div>
-		</div>
-	)
-
 	// Base content that's rendered the same way on both server and client
 	const baseContent = (
 		<div className='audio-text-line'>
@@ -424,27 +385,12 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	}
 
 	// Рендер в зависимости от доступности озвучивания
-	if (speechAvailable) {
-		return (
-			<div
-				onClick={speakText}
-				className={`audio-text-line-interactive ${
-					isSpeaking ? 'speaking' : ''
-				}`}
-			>
-				{baseContent}
-			</div>
-		)
-	} else {
-		return (
-			<>
-				{showWarning && (
-					<div data-speech-warning='true'>
-						<SpeechUnavailableWarning />
-					</div>
-				)}
-				{baseContent}
-			</>
-		)
-	}
+	return (
+		<div
+			onClick={speakText}
+			className={`audio-text-line-interactive ${isSpeaking ? 'speaking' : ''}`}
+		>
+			{baseContent}
+		</div>
+	)
 }
