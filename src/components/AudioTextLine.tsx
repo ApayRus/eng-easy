@@ -8,50 +8,130 @@ interface AudioTextLineProps {
 	text: string
 }
 
-// Проверка доступности Speech API
+// Улучшенная проверка доступности Speech API, включая проверку на Telegram браузер
 const isSpeechSynthesisAvailable = () => {
-	return (
-		typeof window !== 'undefined' &&
-		'speechSynthesis' in window &&
-		'SpeechSynthesisUtterance' in window
-	)
+	try {
+		// Проверка на in-app браузеры, которые могут ограничивать функциональность
+		const userAgent =
+			typeof navigator !== 'undefined' ? navigator.userAgent : ''
+		const isTelegramWebView =
+			typeof window !== 'undefined' &&
+			(window.IS_TELEGRAM_WEBAPP === true ||
+				userAgent.includes('Telegram') ||
+				userAgent.includes('TelegramWebView'))
+
+		// Telegram WebView обычно блокирует или ограничивает SpeechSynthesis
+		if (isTelegramWebView) {
+			console.warn('Telegram WebView detected, speech synthesis may not work')
+			// В Telegram браузере почти всегда API не работает полноценно
+			return false
+		}
+
+		// Основная проверка доступности API
+		const hasAPI =
+			typeof window !== 'undefined' &&
+			'speechSynthesis' in window &&
+			'SpeechSynthesisUtterance' in window
+
+		// Дополнительная проверка - попытка получить голоса
+		if (hasAPI) {
+			// Некоторые браузеры возвращают пустой массив, если API не полностью поддерживается
+			const voices = window.speechSynthesis.getVoices()
+
+			// В некоторых браузерах getVoices() может возвращаться асинхронно
+			// В этом случае мы будем считать, что API доступен, пока не доказано обратное
+			if (voices && voices.length === 0) {
+				// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
+				console.log('No voices available immediately, may load later')
+			}
+		}
+
+		return hasAPI
+	} catch (e) {
+		console.error('Error checking speech synthesis availability:', e)
+		return false
+	}
 }
 
 export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const [isClient, setIsClient] = useState(false)
 	const [isSpeaking, setIsSpeaking] = useState(false)
 	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+	const [speechAvailable, setSpeechAvailable] = useState(true)
+	const [isTelegramBrowser, setIsTelegramBrowser] = useState(false)
 
 	// Split the text into sections
 	const sections = text.split(' / ').map(section => section.trim())
 
 	// Function to load and set available voices
 	const loadVoices = useCallback(() => {
-		if (!isSpeechSynthesisAvailable()) return
-
-		const availableVoices = window.speechSynthesis.getVoices()
-		if (availableVoices.length > 0) {
-			setVoices(availableVoices)
+		if (!isSpeechSynthesisAvailable()) {
+			setSpeechAvailable(false)
+			return
 		}
-	}, [])
+
+		try {
+			const availableVoices = window.speechSynthesis.getVoices()
+			if (availableVoices && availableVoices.length > 0) {
+				setVoices(availableVoices)
+				setSpeechAvailable(true)
+			} else if (isClient) {
+				// Запланируем повторную попытку, только если мы на клиенте
+				setTimeout(loadVoices, 200)
+			}
+		} catch (e) {
+			console.error('Error loading voices:', e)
+			setSpeechAvailable(false)
+		}
+	}, [isClient])
 
 	useEffect(() => {
 		setIsClient(true)
 
-		// Проверяем доступность SpeechSynthesis API
-		if (!isSpeechSynthesisAvailable()) return
+		// Проверяем, открыты ли мы в Telegram браузере
+		if (typeof window !== 'undefined') {
+			const isTelegram =
+				window.IS_TELEGRAM_WEBAPP === true ||
+				navigator.userAgent.includes('Telegram') ||
+				navigator.userAgent.includes('TelegramWebView')
 
-		// Load voices initially
-		loadVoices()
+			setIsTelegramBrowser(isTelegram)
 
-		// Set up event listener for voiceschanged
-		window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
-
-		// Clean up
-		return () => {
-			if (isSpeechSynthesisAvailable()) {
-				window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+			// Если Telegram, сразу показываем иконку внешнего браузера
+			if (isTelegram) {
+				setSpeechAvailable(false)
 			}
+		}
+
+		// Проверяем доступность SpeechSynthesis API
+		const available = isSpeechSynthesisAvailable()
+		setSpeechAvailable(available)
+
+		if (!available) return
+
+		try {
+			// Load voices initially
+			loadVoices()
+
+			// Set up event listener for voiceschanged
+			window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+
+			// Clean up
+			return () => {
+				try {
+					if (isSpeechSynthesisAvailable()) {
+						window.speechSynthesis.removeEventListener(
+							'voiceschanged',
+							loadVoices
+						)
+					}
+				} catch (e) {
+					console.error('Error removing event listener:', e)
+				}
+			}
+		} catch (e) {
+			console.error('Error in speech synthesis setup:', e)
+			setSpeechAvailable(false)
 		}
 	}, [loadVoices])
 
@@ -74,57 +154,124 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		if (anyEnglishUsGbVoice) return anyEnglishUsGbVoice
 
 		// Priority 3: Any voice that starts with 'en'
-		const anyEnglishVoice = voices.find(voice => voice.lang.startsWith('en'))
+		const anyEnglishVoice = voices.find(
+			voice => voice.lang && voice.lang.startsWith('en')
+		)
 		if (anyEnglishVoice) return anyEnglishVoice
 
 		// Fallback: Just return the first voice
 		return voices[0]
 	}, [voices])
 
-	const speakText = () => {
-		if (!isClient || !isSpeechSynthesisAvailable()) return
+	const openInRegularBrowser = () => {
+		// Добавляем визуальную индикацию перехода
+		if (isTelegramBrowser) {
+			// Добавляем класс анимации
+			const lineElement = document.querySelector('.audio-text-line-interactive')
+			if (lineElement) {
+				lineElement.classList.add('loading-external')
 
-		// Stop any ongoing speech
-		window.speechSynthesis.cancel()
+				// Показываем сообщение о переходе
+				const infoElement = document.querySelector(
+					'.telegram-browser-info .info-text'
+				)
+				if (infoElement) {
+					infoElement.textContent = 'Открываем во внешнем браузере...'
+				}
+			}
+		}
 
-		// Get the English text (first section)
-		const englishText = sections[0]
+		// Получаем текущий URL
+		let currentUrl = window.location.href
 
-		// Create a new speech synthesis utterance
-		const utterance = new SpeechSynthesisUtterance(englishText)
-
-		// Set language explicitly to English
-		utterance.lang = 'en-US'
-
-		// Get current speech rate from the global control
-		const currentRate = getSpeechRate()
-
-		// Set voice properties
-		utterance.rate = currentRate // Используем установленную пользователем скорость
-		utterance.pitch = 1.0
-		utterance.volume = 1.0
-
-		// Find the best English voice
-		const bestVoice = findBestEnglishVoice()
-		if (bestVoice) {
-			utterance.voice = bestVoice
-			console.log(
-				`Using voice: ${bestVoice.name} (${bestVoice.lang}) at rate: ${currentRate}`
-			)
+		// Добавляем параметр external=true для автоматического открытия
+		if (currentUrl.includes('?')) {
+			currentUrl += '&external=true'
 		} else {
-			console.log('No suitable English voice found')
+			currentUrl += '?external=true'
 		}
 
-		// Set up event listeners
-		utterance.onstart = () => setIsSpeaking(true)
-		utterance.onend = () => setIsSpeaking(false)
-		utterance.onerror = e => {
-			console.error('Speech synthesis error:', e)
-			setIsSpeaking(false)
+		// Создаем якорь для открытия в новом окне/вкладке
+		const a = document.createElement('a')
+		a.href = currentUrl
+		a.target = '_blank'
+		a.rel = 'noopener noreferrer'
+		a.click()
+	}
+
+	const speakText = () => {
+		// Если мы в Telegram, всегда предлагаем открыть в обычном браузере
+		if (isClient && isTelegramBrowser) {
+			// Добавляем плавное мигание иконки внешнего браузера
+			const infoMessage = document.querySelector('.telegram-browser-info')
+			if (infoMessage) {
+				infoMessage.classList.add('highlight-animation')
+				setTimeout(() => {
+					infoMessage.classList.remove('highlight-animation')
+				}, 1000)
+			}
+			return
 		}
 
-		// Speak the text
-		window.speechSynthesis.speak(utterance)
+		if (!isClient || !speechAvailable || !isSpeechSynthesisAvailable()) {
+			if (isClient) {
+				alert(
+					'Функция озвучивания не поддерживается вашим браузером. Попробуйте открыть сайт в Chrome, Safari или Firefox.'
+				)
+			}
+			return
+		}
+
+		try {
+			// Stop any ongoing speech
+			window.speechSynthesis.cancel()
+
+			// Get the English text (first section)
+			const englishText = sections[0]
+
+			// Create a new speech synthesis utterance
+			const utterance = new SpeechSynthesisUtterance(englishText)
+
+			// Set language explicitly to English
+			utterance.lang = 'en-US'
+
+			// Get current speech rate from the global control
+			const currentRate = getSpeechRate()
+
+			// Set voice properties
+			utterance.rate = currentRate // Используем установленную пользователем скорость
+			utterance.pitch = 1.0
+			utterance.volume = 1.0
+
+			// Find the best English voice
+			const bestVoice = findBestEnglishVoice()
+			if (bestVoice) {
+				utterance.voice = bestVoice
+				console.log(
+					`Using voice: ${bestVoice.name} (${bestVoice.lang}) at rate: ${currentRate}`
+				)
+			} else {
+				console.log('No suitable English voice found')
+			}
+
+			// Set up event listeners
+			utterance.onstart = () => setIsSpeaking(true)
+			utterance.onend = () => setIsSpeaking(false)
+			utterance.onerror = e => {
+				console.error('Speech synthesis error:', e)
+				setIsSpeaking(false)
+			}
+
+			// Speak the text
+			window.speechSynthesis.speak(utterance)
+		} catch (e) {
+			console.error('Error during speech synthesis:', e)
+			if (isClient) {
+				alert(
+					'Не удалось запустить озвучивание. Возможно, ваш браузер не поддерживает эту функцию.'
+				)
+			}
+		}
 	}
 
 	// Base content that's rendered the same way on both server and client
@@ -163,18 +310,75 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		</div>
 	)
 
+	// Иконка внешнего браузера (для Telegram)
+	const ExternalBrowserButton = () => (
+		<button
+			onClick={openInRegularBrowser}
+			className='external-browser-button'
+			aria-label='Открыть в браузере'
+			title='Открыть в браузере для озвучивания'
+		>
+			<svg
+				viewBox='0 0 24 24'
+				width='16'
+				height='16'
+				stroke='currentColor'
+				strokeWidth='2'
+				fill='none'
+			>
+				<path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'></path>
+				<polyline points='15 3 21 3 21 9'></polyline>
+				<line x1='10' y1='14' x2='21' y2='3'></line>
+			</svg>
+		</button>
+	)
+
 	// On the server and initial client render, return the base content
 	if (!isClient) {
 		return baseContent
 	}
 
-	// On the client after hydration, wrap the content with interactive elements
+	// Если мы в Telegram браузере, показываем специальный UI
+	if (isTelegramBrowser) {
+		return (
+			<>
+				<div className='audio-text-line-container telegram-browser'>
+					<div
+						onClick={openInRegularBrowser}
+						className='audio-text-line-interactive'
+						title='Нажмите, чтобы открыть во внешнем браузере с поддержкой озвучивания'
+					>
+						{baseContent}
+					</div>
+
+					<div className='telegram-browser-info'>
+						<div className='info-text'>
+							Для озвучивания откройте в обычном браузере
+						</div>
+						<ExternalBrowserButton />
+					</div>
+				</div>
+			</>
+		)
+	}
+
+	// На клиенте после гидратации оборачиваем контент интерактивными элементами
 	return (
-		<div
-			onClick={speakText}
-			className={`audio-text-line-interactive ${isSpeaking ? 'speaking' : ''}`}
-		>
-			{baseContent}
-		</div>
+		<>
+			<div
+				onClick={speakText}
+				className={`audio-text-line-interactive ${
+					isSpeaking ? 'speaking' : ''
+				}`}
+			>
+				{baseContent}
+			</div>
+			{isClient && !speechAvailable && !isTelegramBrowser && (
+				<div className='speech-unavailable-message'>
+					Функция озвучивания недоступна в вашем браузере. Попробуйте открыть в
+					Chrome, Safari или Firefox.
+				</div>
+			)}
+		</>
 	)
 }

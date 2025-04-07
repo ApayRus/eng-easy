@@ -46,7 +46,7 @@ article.prose {
 article.prose h1:first-child,
 article.prose h2:first-child,
 article.prose h3:first-child {
-	padding-top: 20px; /* Дополнительный отступ для первого заголовка */
+	/* padding-top: 20px; Дополнительный отступ для первого заголовка */
 }
 
 /* Адаптивные стили */

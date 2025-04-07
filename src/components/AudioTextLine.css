@@ -137,3 +137,147 @@
 		font-size: 0.8125rem;
 	}
 }
+
+.speech-unavailable-message {
+	font-size: 0.85rem;
+	color: var(--secondary);
+	margin-top: 0.5rem;
+	text-align: center;
+	padding: 0.5rem;
+	border-radius: 4px;
+	background-color: rgba(255, 193, 7, 0.1);
+	border: 1px solid rgba(255, 193, 7, 0.3);
+	margin-bottom: 1rem;
+}
+
+.audio-text-line-container {
+	position: relative;
+	width: 100%;
+}
+
+.telegram-browser-info {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 8px;
+	padding: 8px 12px;
+	background-color: rgba(255, 193, 7, 0.1);
+	border: 1px solid rgba(255, 193, 7, 0.3);
+	border-radius: 6px;
+	font-size: 0.85rem;
+	color: var(--secondary);
+}
+
+.info-text {
+	flex: 1;
+}
+
+.external-browser-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background-color: var(--primary);
+	color: white;
+	border: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	margin-left: 8px;
+	flex-shrink: 0;
+}
+
+.external-browser-button:hover {
+	background-color: var(--primary-dark);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Анимация для привлечения внимания */
+@keyframes highlight-pulse {
+	0% {
+		background-color: rgba(255, 193, 7, 0.1);
+	}
+	50% {
+		background-color: rgba(255, 193, 7, 0.3);
+	}
+	100% {
+		background-color: rgba(255, 193, 7, 0.1);
+	}
+}
+
+.highlight-animation {
+	animation: highlight-pulse 1s ease;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 640px) {
+	.telegram-browser-info {
+		padding: 6px 10px;
+		font-size: 0.8rem;
+	}
+
+	.external-browser-button {
+		width: 28px;
+		height: 28px;
+	}
+}
+
+/* Стили для Telegram браузера */
+.telegram-browser .audio-text-line-interactive:hover .line-container {
+	background-color: rgba(37, 99, 235, 0.1);
+	border: 1px dashed var(--primary);
+}
+
+.telegram-browser .audio-text-line-interactive:hover::after {
+	content: 'Нажмите для открытия во внешнем браузере';
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: rgba(0, 0, 0, 0.8);
+	color: white;
+	padding: 6px 10px;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	white-space: nowrap;
+	z-index: 100;
+	margin-bottom: 5px;
+	pointer-events: none;
+	opacity: 0.9;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Стили для анимации загрузки */
+.loading-external .line-container {
+	background-color: rgba(37, 99, 235, 0.1) !important;
+	border: 1px solid var(--primary) !important;
+	position: relative;
+	overflow: hidden;
+}
+
+.loading-external .line-container::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(37, 99, 235, 0.2),
+		transparent
+	);
+	animation: loading-sweep 1.5s infinite;
+}
+
+@keyframes loading-sweep {
+	0% {
+		left: -100%;
+	}
+	100% {
+		left: 100%;
+	}
+}
