@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import './AudioTextLine.css'
 
 interface AudioTextLineProps {
@@ -10,13 +10,59 @@ interface AudioTextLineProps {
 export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const [isClient, setIsClient] = useState(false)
 	const [isSpeaking, setIsSpeaking] = useState(false)
-
-	useEffect(() => {
-		setIsClient(true)
-	}, [])
+	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
 
 	// Split the text into sections
 	const sections = text.split(' / ').map(section => section.trim())
+
+	// Function to load and set available voices
+	const loadVoices = useCallback(() => {
+		const availableVoices = window.speechSynthesis.getVoices()
+		if (availableVoices.length > 0) {
+			setVoices(availableVoices)
+		}
+	}, [])
+
+	useEffect(() => {
+		setIsClient(true)
+
+		// Load voices initially
+		loadVoices()
+
+		// Set up event listener for voiceschanged
+		window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+
+		// Clean up
+		return () => {
+			window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+		}
+	}, [loadVoices])
+
+	// Function to find the best English voice
+	const findBestEnglishVoice = useCallback(() => {
+		if (voices.length === 0) return null
+
+		// Priority 1: Try to find a native English voice with 'en-US' or 'en-GB' locale
+		const nativeEnglishVoice = voices.find(
+			voice =>
+				(voice.lang === 'en-US' || voice.lang === 'en-GB') &&
+				!voice.localService
+		)
+		if (nativeEnglishVoice) return nativeEnglishVoice
+
+		// Priority 2: Any voice with 'en-US' or 'en-GB' locale
+		const anyEnglishUsGbVoice = voices.find(
+			voice => voice.lang === 'en-US' || voice.lang === 'en-GB'
+		)
+		if (anyEnglishUsGbVoice) return anyEnglishUsGbVoice
+
+		// Priority 3: Any voice that starts with 'en'
+		const anyEnglishVoice = voices.find(voice => voice.lang.startsWith('en'))
+		if (anyEnglishVoice) return anyEnglishVoice
+
+		// Fallback: Just return the first voice
+		return voices[0]
+	}, [voices])
 
 	const speakText = () => {
 		if (!isClient) return
@@ -30,25 +76,30 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		// Create a new speech synthesis utterance
 		const utterance = new SpeechSynthesisUtterance(englishText)
 
+		// Set language explicitly to English
+		utterance.lang = 'en-US'
+
 		// Set voice properties
 		utterance.rate = 1.0
 		utterance.pitch = 1.0
 		utterance.volume = 1.0
 
-		// Try to find a female English voice
-		const voices = window.speechSynthesis.getVoices()
-		const englishVoice = voices.find(
-			voice => voice.lang.includes('en') && voice.name.includes('Female')
-		)
-
-		if (englishVoice) {
-			utterance.voice = englishVoice
+		// Find the best English voice
+		const bestVoice = findBestEnglishVoice()
+		if (bestVoice) {
+			utterance.voice = bestVoice
+			console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`)
+		} else {
+			console.log('No suitable English voice found')
 		}
 
 		// Set up event listeners
 		utterance.onstart = () => setIsSpeaking(true)
 		utterance.onend = () => setIsSpeaking(false)
-		utterance.onerror = () => setIsSpeaking(false)
+		utterance.onerror = e => {
+			console.error('Speech synthesis error:', e)
+			setIsSpeaking(false)
+		}
 
 		// Speak the text
 		window.speechSynthesis.speak(utterance)
