@@ -125,6 +125,11 @@ export default function RootLayout({
 						
 						// Создаем и добавляем баннер с предупреждением, если это Telegram WebApp
 						if (isTelegramWebApp()) {
+							// Добавляем класс к body для стилизации
+							document.addEventListener('DOMContentLoaded', () => {
+								document.body.classList.add('telegram-webapp');
+							});
+							
 							// Проверяем параметр в URL для автоматического открытия во внешнем браузере
 							const urlParams = new URLSearchParams(window.location.search);
 							const autoOpen = urlParams.get('external') === 'true';
@@ -197,49 +202,102 @@ export default function RootLayout({
 									banner.style.top = '0';
 									banner.style.left = '0';
 									banner.style.right = '0';
-									banner.style.backgroundColor = 'rgba(255, 193, 7, 0.9)';
-									banner.style.color = '#333';
-									banner.style.padding = '10px';
+									banner.style.backgroundColor = '#f44336'; // Красный фон для привлечения внимания
+									banner.style.color = 'white';
+									banner.style.padding = '12px';
 									banner.style.textAlign = 'center';
 									banner.style.zIndex = '9999';
-									banner.style.fontSize = '14px';
+									banner.style.fontSize = '15px';
+									banner.style.fontWeight = '500';
 									banner.style.display = 'flex';
 									banner.style.alignItems = 'center';
-									banner.style.justifyContent = 'space-between';
+									banner.style.justifyContent = 'center';
 									banner.style.flexWrap = 'wrap';
+									banner.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
 									
+									// Создаем контейнер для содержимого баннера
+									const bannerContent = document.createElement('div');
+									bannerContent.style.display = 'flex';
+									bannerContent.style.alignItems = 'center';
+									bannerContent.style.justifyContent = 'center';
+									bannerContent.style.width = '100%';
+									bannerContent.style.maxWidth = '960px';
+									bannerContent.style.margin = '0 auto';
+									
+									// Иконка "Внимание"
+									const iconSpan = document.createElement('span');
+									iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+									iconSpan.style.marginRight = '10px';
+									iconSpan.style.display = 'flex';
+									iconSpan.style.alignItems = 'center';
+									
+									// Текст сообщения
 									const messageSpan = document.createElement('span');
-									messageSpan.textContent = 'Озвучивание может быть недоступно в Telegram браузере. Рекомендуем открыть в обычном браузере.';
+									messageSpan.textContent = 'Озвучивание не работает в Телеграм браузере. Откройте в обычном браузере: Chrome, Firefox, Safari';
 									messageSpan.style.flexGrow = '1';
 									messageSpan.style.padding = '0 10px';
 									
-									const closeBtn = document.createElement('button');
-									closeBtn.innerHTML = '×';
-									closeBtn.style.background = 'none';
-									closeBtn.style.border = 'none';
-									closeBtn.style.fontSize = '20px';
-									closeBtn.style.cursor = 'pointer';
-									closeBtn.style.marginLeft = '10px';
-									closeBtn.onclick = () => banner.style.display = 'none';
-									
+									// Кнопка открытия во внешнем браузере
 									const openBtn = document.createElement('button');
-									openBtn.textContent = 'Открыть';
-									openBtn.style.backgroundColor = '#2563eb';
-									openBtn.style.color = 'white';
+									openBtn.textContent = 'Открыть в браузере';
+									openBtn.style.backgroundColor = 'white';
+									openBtn.style.color = '#f44336';
 									openBtn.style.border = 'none';
 									openBtn.style.borderRadius = '4px';
-									openBtn.style.padding = '5px 10px';
+									openBtn.style.padding = '8px 12px';
+									openBtn.style.fontWeight = 'bold';
 									openBtn.style.cursor = 'pointer';
 									openBtn.style.marginLeft = '10px';
+									openBtn.style.whiteSpace = 'nowrap';
 									openBtn.onclick = openInExternalBrowser;
+									
+									// Кнопка закрытия баннера
+									const closeBtn = document.createElement('button');
+									closeBtn.innerHTML = '×';
+									closeBtn.style.background = 'transparent';
+									closeBtn.style.border = 'none';
+									closeBtn.style.fontSize = '24px';
+									closeBtn.style.color = 'white';
+									closeBtn.style.cursor = 'pointer';
+									closeBtn.style.marginLeft = '10px';
+									closeBtn.style.padding = '0 5px';
+									closeBtn.onclick = () => {
+										banner.style.display = 'none';
+										// Сохраняем в localStorage, что баннер был закрыт
+										try {
+											localStorage.setItem('telegram_speech_banner_closed', 'true');
+										} catch (e) {
+											console.error('Ошибка при сохранении настройки баннера:', e);
+										}
+									};
+									
+									// Проверяем, был ли баннер закрыт ранее
+									let bannerWasClosed = false;
+									try {
+										bannerWasClosed = localStorage.getItem('telegram_speech_banner_closed') === 'true';
+									} catch (e) {
+										console.error('Ошибка при чтении настройки баннера:', e);
+									}
+									
+									// Если баннер ранее закрывали, не показываем его снова
+									if (bannerWasClosed) {
+										return;
+									}
 
-									// Добавляем чекбокс для сохранения выбора
+									// Добавляем все элементы в баннер
+									bannerContent.appendChild(iconSpan);
+									bannerContent.appendChild(messageSpan);
+									bannerContent.appendChild(openBtn);
+									bannerContent.appendChild(closeBtn);
+									banner.appendChild(bannerContent);
+									
+									// Добавляем чекбокс для выбора "Всегда открывать во внешнем браузере"
 									const checkboxContainer = document.createElement('div');
 									checkboxContainer.style.display = 'flex';
 									checkboxContainer.style.alignItems = 'center';
-									checkboxContainer.style.marginTop = '5px';
-									checkboxContainer.style.width = '100%';
 									checkboxContainer.style.justifyContent = 'center';
+									checkboxContainer.style.marginTop = '8px';
+									checkboxContainer.style.width = '100%';
 
 									const alwaysRedirectCheckbox = document.createElement('input');
 									alwaysRedirectCheckbox.type = 'checkbox';
@@ -253,16 +311,19 @@ export default function RootLayout({
 									const checkboxLabel = document.createElement('label');
 									checkboxLabel.htmlFor = 'always-redirect';
 									checkboxLabel.textContent = 'Всегда открывать во внешнем браузере';
-									checkboxLabel.style.fontSize = '12px';
+									checkboxLabel.style.fontSize = '14px';
+									checkboxLabel.style.color = 'white';
 
 									checkboxContainer.appendChild(alwaysRedirectCheckbox);
 									checkboxContainer.appendChild(checkboxLabel);
+									banner.appendChild(checkboxContainer);
 									
-									banner.appendChild(messageSpan);
-									banner.appendChild(openBtn);
-									banner.appendChild(closeBtn);
-									document.body.appendChild(banner);
-									document.body.appendChild(checkboxContainer);
+									// Добавляем баннер в начало body
+									if (document.body.firstChild) {
+										document.body.insertBefore(banner, document.body.firstChild);
+									} else {
+										document.body.appendChild(banner);
+									}
 								}
 							});
 						}

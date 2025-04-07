@@ -215,32 +215,16 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	}
 
 	const speakText = () => {
-		// Если мы в Telegram, сначала проверяем, доступен ли Speech API
+		// Если мы в Telegram браузере, перенаправляем во внешний браузер
 		if (isClient && isTelegramBrowser) {
-			// Проверка доступности API в Telegram браузере
-			if (!speechAvailable) {
-				// API не доступен, предлагаем открыть в обычном браузере
-				const infoMessage = document.querySelector('.telegram-browser-info')
-				if (infoMessage) {
-					infoMessage.classList.add('highlight-animation')
-					setTimeout(() => {
-						infoMessage.classList.remove('highlight-animation')
-					}, 1000)
-				}
-				return
-			}
-			// Если API доступен, продолжаем работу как обычно
-			console.log('Attempting to use Speech API in Telegram browser')
+			openInRegularBrowser()
+			return
 		}
 
 		if (!isClient || !speechAvailable || !isSpeechSynthesisAvailable()) {
 			if (isClient) {
 				alert(
-					JSON.stringify({
-						isClient,
-						speechAvailable,
-						isSpeechSynthesisAvailable
-					})
+					'Функция озвучивания не поддерживается вашим браузером. Попробуйте открыть сайт в Chrome, Safari или Firefox.'
 				)
 			}
 			return
@@ -334,93 +318,36 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		</div>
 	)
 
-	// Иконка внешнего браузера (для Telegram)
-	const ExternalBrowserButton = () => (
-		<button
-			onClick={openInRegularBrowser}
-			className='external-browser-button'
-			aria-label='Открыть в браузере'
-			title='Открыть в обычном браузере для лучшей поддержки озвучивания'
-		>
-			<svg
-				viewBox='0 0 24 24'
-				width='16'
-				height='16'
-				stroke='currentColor'
-				strokeWidth='2'
-				fill='none'
-			>
-				<path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'></path>
-				<polyline points='15 3 21 3 21 9'></polyline>
-				<line x1='10' y1='14' x2='21' y2='3'></line>
-			</svg>
-		</button>
-	)
-
 	// On the server and initial client render, return the base content
 	if (!isClient) {
 		return baseContent
 	}
 
 	// Если мы в Telegram браузере, показываем специальный UI
-	// Если Speech API доступен в Telegram, показываем обычный UI с дополнительной информацией
-	if (speechAvailable) {
+	if (isTelegramBrowser) {
+		// В Telegram браузере показываем UI без лишних уведомлений,
+		// но с возможностью открыть во внешнем браузере при клике
 		return (
-			<>
-				<div className='audio-text-line-container telegram-browser'>
-					<div
-						onClick={speakText}
-						className={`audio-text-line-interactive ${
-							isSpeaking ? 'speaking' : ''
-						}`}
-					>
-						{baseContent}
-					</div>
-
-					<div className='telegram-browser-info success'>
-						<div className='info-text'>
-							Озвучивание доступно в вашем Telegram браузере!
-						</div>
-					</div>
-				</div>
-			</>
+			<div
+				onClick={openInRegularBrowser}
+				className='audio-text-line-interactive'
+				title='Нажмите, чтобы открыть во внешнем браузере с поддержкой озвучивания'
+			>
+				{baseContent}
+			</div>
 		)
 	} else {
 		return (
 			<>
-				<div className='audio-text-line-container telegram-browser'>
-					<div
-						onClick={openInRegularBrowser}
-						className='audio-text-line-interactive'
-						title='Нажмите, чтобы открыть во внешнем браузере с поддержкой озвучивания'
-					>
-						{baseContent}
-					</div>
-
-					<div className='telegram-browser-info'>
-						<div className='info-text'>
-							Для озвучивания откройте в обычном браузере
-						</div>
-						<ExternalBrowserButton />
-					</div>
+				<div
+					onClick={speakText}
+					className={`audio-text-line-interactive ${
+						isSpeaking ? 'speaking' : ''
+					}`}
+				>
+					{baseContent}
 				</div>
 			</>
 		)
 	}
-
-	// Если Speech API не доступен, показываем UI с предложением открыть во внешнем браузере
-
-	// На клиенте после гидратации оборачиваем контент интерактивными элементами
-	return (
-		<>
-			<div
-				onClick={speakText}
-				className={`audio-text-line-interactive ${
-					isSpeaking ? 'speaking' : ''
-				}`}
-			>
-				{baseContent}
-			</div>
-		</>
-	)
 }
