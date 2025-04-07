@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { getSpeechRate } from './SpeechControls'
 import './AudioTextLine.css'
 
 interface AudioTextLineProps {
@@ -79,8 +80,11 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		// Set language explicitly to English
 		utterance.lang = 'en-US'
 
+		// Get current speech rate from the global control
+		const currentRate = getSpeechRate()
+
 		// Set voice properties
-		utterance.rate = 1.0
+		utterance.rate = currentRate // Используем установленную пользователем скорость
 		utterance.pitch = 1.0
 		utterance.volume = 1.0
 
@@ -88,7 +92,9 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		const bestVoice = findBestEnglishVoice()
 		if (bestVoice) {
 			utterance.voice = bestVoice
-			console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`)
+			console.log(
+				`Using voice: ${bestVoice.name} (${bestVoice.lang}) at rate: ${currentRate}`
+			)
 		} else {
 			console.log('No suitable English voice found')
 		}

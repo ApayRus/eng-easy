@@ -1,0 +1,126 @@
+.speech-controls {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	height: 100%;
+}
+
+.speech-rate-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	margin-right: 5px;
+}
+
+.speech-rate-label {
+	font-size: 10px;
+	color: #495057;
+	margin-bottom: 2px;
+	width: 100%;
+	text-align: center;
+}
+
+.speech-rate-control {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	width: 100px;
+	gap: 4px;
+}
+
+.speech-rate-control input[type='range'] {
+	width: 70px;
+	height: 4px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: #dee2e6;
+	border-radius: 2px;
+	outline: none;
+}
+
+.speech-rate-control input[type='range']::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #0275d8;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.speech-rate-control input[type='range']::-webkit-slider-thumb:hover {
+	background: #0163b3;
+}
+
+.speech-rate-control input[type='range']::-moz-range-thumb {
+	width: 12px;
+	height: 12px;
+	border: none;
+	border-radius: 50%;
+	background: #0275d8;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.speech-rate-control input[type='range']::-moz-range-thumb:hover {
+	background: #0163b3;
+}
+
+.speech-rate-value {
+	font-size: 10px;
+	font-weight: 500;
+	color: #0275d8;
+	min-width: 18px;
+	text-align: right;
+}
+
+/* Мобильные стили */
+@media (max-width: 640px) {
+	.speech-rate-wrapper {
+		margin-right: 3px;
+	}
+
+	.speech-rate-control {
+		width: 85px;
+		gap: 3px;
+	}
+
+	.speech-rate-control input[type='range'] {
+		width: 60px;
+	}
+
+	.speech-rate-label {
+		font-size: 9px;
+	}
+
+	.speech-rate-value {
+		font-size: 9px;
+		min-width: 16px;
+	}
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 400px) {
+	.speech-rate-wrapper {
+		margin-right: 2px;
+	}
+
+	.speech-rate-control {
+		width: 70px;
+		gap: 2px;
+	}
+
+	.speech-rate-control input[type='range'] {
+		width: 50px;
+	}
+
+	.speech-rate-label {
+		font-size: 8px;
+	}
+
+	.speech-rate-value {
+		font-size: 8px;
+		min-width: 14px;
+	}
+}
