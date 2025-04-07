@@ -1,3 +1,8 @@
+/**
+ * Компонент AudioTextLine - отображает строку текста с возможностью озвучивания
+ * Реализует надежное обнаружение и использование Web Speech API
+ * с учетом особенностей работы в различных браузерах, включая Telegram WebView
+ */
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
@@ -8,7 +13,10 @@ interface AudioTextLineProps {
 	text: string
 }
 
-// Улучшенная проверка доступности Speech API, включая проверку на Telegram браузер
+/**
+ * Проверяет доступность Speech API
+ * Учитывает особенности Telegram WebView и других браузеров
+ */
 const isSpeechSynthesisAvailable = () => {
 	try {
 		// Проверка на in-app браузеры, которые могут ограничивать функциональность
@@ -77,80 +85,20 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const [isClient, setIsClient] = useState(false)
 	const [isSpeaking, setIsSpeaking] = useState(false)
 	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
-	const [speechAvailable, setSpeechAvailable] = useState(true)
-	const [isTelegramBrowser, setIsTelegramBrowser] = useState(false)
+	const [speechAvailable, setSpeechAvailable] = useState(false) // Изначально false для SSR
+	const [showWarning, setShowWarning] = useState(false) // Для контроля отображения баннера
 
 	// Split the text into sections
 	const sections = text.split(' / ').map(section => section.trim())
 
-	// Function to load and set available voices
-	const loadVoices = useCallback(() => {
-		if (!isSpeechSynthesisAvailable()) {
-			setSpeechAvailable(false)
-			return
-		}
-
-		try {
-			const availableVoices = window.speechSynthesis.getVoices()
-			if (availableVoices && availableVoices.length > 0) {
-				setVoices(availableVoices)
-				setSpeechAvailable(true)
-			} else if (isClient) {
-				// Запланируем повторную попытку, только если мы на клиенте
-				setTimeout(loadVoices, 200)
-			}
-		} catch (e) {
-			console.error('Error loading voices:', e)
-			setSpeechAvailable(false)
-		}
-	}, [isClient])
-
-	useEffect(() => {
-		setIsClient(true)
-
-		// Проверяем, открыты ли мы в Telegram браузере
-		if (typeof window !== 'undefined') {
-			const isTelegram =
-				window.IS_TELEGRAM_WEBAPP === true ||
-				navigator.userAgent.includes('Telegram') ||
-				navigator.userAgent.includes('TelegramWebView')
-
-			setIsTelegramBrowser(isTelegram)
-		}
-
-		// Проверяем доступность SpeechSynthesis API
-		const available = isSpeechSynthesisAvailable()
-		setSpeechAvailable(available)
-
-		if (!available) return
-
-		try {
-			// Load voices initially
-			loadVoices()
-
-			// Set up event listener for voiceschanged
-			window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
-
-			// Clean up
-			return () => {
-				try {
-					if (isSpeechSynthesisAvailable()) {
-						window.speechSynthesis.removeEventListener(
-							'voiceschanged',
-							loadVoices
-						)
-					}
-				} catch (e) {
-					console.error('Error removing event listener:', e)
-				}
-			}
-		} catch (e) {
-			console.error('Error in speech synthesis setup:', e)
-			setSpeechAvailable(false)
-		}
-	}, [loadVoices])
-
-	// Function to find the best English voice
+	/**
+	 * Ищет наиболее подходящий английский голос по приоритетам:
+	 * 1. Нативный голос en-US или en-GB (не localService)
+	 * 2. Любой голос с языком en-US или en-GB
+	 * 3. Любой голос, начинающийся с 'en'
+	 * 4. Первый доступный голос в списке
+	 * @returns Найденный голос SpeechSynthesisVoice или null если голоса не доступны
+	 */
 	const findBestEnglishVoice = useCallback(() => {
 		if (voices.length === 0) return null
 
@@ -178,64 +126,136 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		return voices[0]
 	}, [voices])
 
-	const openInRegularBrowser = () => {
-		// Добавляем визуальную индикацию перехода
-		if (isTelegramBrowser) {
-			// Добавляем класс анимации
-			const lineElement = document.querySelector('.audio-text-line-interactive')
-			if (lineElement) {
-				lineElement.classList.add('loading-external')
+	// Function to load and set available voices
+	const loadVoices = useCallback(() => {
+		if (!isClient) return
 
-				// Показываем сообщение о переходе
-				const infoElement = document.querySelector(
-					'.telegram-browser-info .info-text'
-				)
-				if (infoElement) {
-					infoElement.textContent = 'Открываем во внешнем браузере...'
-				}
-			}
-		}
-
-		// Получаем текущий URL
-		let currentUrl = window.location.href
-
-		// Добавляем параметр external=true для автоматического открытия
-		if (currentUrl.includes('?')) {
-			currentUrl += '&external=true'
-		} else {
-			currentUrl += '?external=true'
-		}
-
-		// Создаем якорь для открытия в новом окне/вкладке
-		const a = document.createElement('a')
-		a.href = currentUrl
-		a.target = '_blank'
-		a.rel = 'noopener noreferrer'
-		a.click()
-	}
-
-	const speakText = () => {
-		// Если озвучивание недоступно, перенаправляем во внешний браузер
-		if (isClient && !speechAvailable) {
-			openInRegularBrowser()
-			return
-		}
-
-		if (!isClient || !isSpeechSynthesisAvailable()) {
-			if (isClient) {
-				alert(
-					'Функция озвучивания не поддерживается вашим браузером. Попробуйте открыть сайт в Chrome, Safari или Firefox.'
-				)
-			}
+		if (!isSpeechSynthesisAvailable()) {
+			setSpeechAvailable(false)
 			return
 		}
 
 		try {
+			const availableVoices = window.speechSynthesis.getVoices()
+			if (availableVoices && availableVoices.length > 0) {
+				setVoices(availableVoices)
+				setSpeechAvailable(true)
+			} else {
+				// Запланируем повторную попытку
+				setTimeout(loadVoices, 200)
+			}
+		} catch (e) {
+			console.error('Error loading voices:', e)
+			setSpeechAvailable(false)
+		}
+	}, [isClient])
+
+	// Проверка должна ли отображаться предупреждение
+	useEffect(() => {
+		if (isClient && !speechAvailable && typeof document !== 'undefined') {
+			const warningExists = document.querySelector(
+				'[data-speech-warning="true"]'
+			)
+			setShowWarning(!warningExists)
+		}
+	}, [isClient, speechAvailable])
+
+	// Инициализация клиентского состояния и проверка Speech API
+	useEffect(() => {
+		setIsClient(true)
+
+		// Всю работу с браузерным API делаем только на клиенте
+		if (typeof window !== 'undefined') {
+			// Проверяем доступность API
+			const available = isSpeechSynthesisAvailable()
+			setSpeechAvailable(available)
+
+			if (available) {
+				// Загружаем голоса
+				loadVoices()
+
+				// Подписываемся на изменения голосов
+				window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+
+				// Отписываемся при размонтировании
+				return () => {
+					window.speechSynthesis.removeEventListener(
+						'voiceschanged',
+						loadVoices
+					)
+				}
+			}
+		}
+	}, [loadVoices])
+
+	/**
+	 * Функция для безопасного запуска синтеза речи с учетом состояния синтезатора
+	 * Решает проблему с первым запуском и ошибками при одновременных вызовах
+	 * @param utterance - объект SpeechSynthesisUtterance для воспроизведения
+	 */
+	const safelySpeakUtterance = (utterance: SpeechSynthesisUtterance) => {
+		try {
+			// Проверяем состояние синтезатора речи
+			if (window.speechSynthesis.speaking) {
+				console.log('Speech synthesis is already speaking, cancelling...')
+				window.speechSynthesis.cancel()
+				// Небольшая задержка для сброса состояния
+				setTimeout(() => {
+					window.speechSynthesis.speak(utterance)
+				}, 50)
+			} else {
+				// Запускаем синтез напрямую
+				window.speechSynthesis.speak(utterance)
+			}
+		} catch (e) {
+			console.error('Error in safelySpeakUtterance:', e)
+		}
+	}
+
+	/**
+	 * Основная функция для озвучивания английского текста
+	 * Содержит проверки доступности API, голосов и обработку ошибок
+	 * Реализует механизм повторных попыток при ошибках
+	 */
+	const speakText = () => {
+		// Если озвучивание недоступно, ничего не делаем
+		if (!isClient || !speechAvailable) {
+			return
+		}
+
+		try {
+			// Дополнительная проверка доступности Speech API
+			if (!window.speechSynthesis) {
+				console.warn('Speech synthesis is not available')
+				return
+			}
+
 			// Stop any ongoing speech
 			window.speechSynthesis.cancel()
 
 			// Get the English text (first section)
 			const englishText = sections[0]
+			if (!englishText || englishText.trim() === '') {
+				console.warn('No text to speak')
+				return
+			}
+
+			// Убедимся, что у нас есть голоса или запросим их загрузку
+			if (voices.length === 0) {
+				console.log('No voices available, attempting to load voices')
+
+				// Пробуем перезагрузить голоса
+				const availableVoices = window.speechSynthesis.getVoices()
+				if (availableVoices && availableVoices.length > 0) {
+					console.log(`Found ${availableVoices.length} voices on demand`)
+					setVoices(availableVoices)
+				} else {
+					// Если голоса все еще не загружены, повторим попытку через таймаут
+					console.log(
+						'Voices not ready yet, attempting to speak with default voice'
+					)
+				}
+			}
 
 			// Create a new speech synthesis utterance
 			const utterance = new SpeechSynthesisUtterance(englishText)
@@ -247,7 +267,7 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			const currentRate = getSpeechRate()
 
 			// Set voice properties
-			utterance.rate = currentRate // Используем установленную пользователем скорость
+			utterance.rate = currentRate
 			utterance.pitch = 1.0
 			utterance.volume = 1.0
 
@@ -259,28 +279,108 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 					`Using voice: ${bestVoice.name} (${bestVoice.lang}) at rate: ${currentRate}`
 				)
 			} else {
-				console.log('No suitable English voice found')
+				console.log('No suitable English voice found, using default voice')
 			}
 
 			// Set up event listeners
-			utterance.onstart = () => setIsSpeaking(true)
-			utterance.onend = () => setIsSpeaking(false)
-			utterance.onerror = e => {
-				console.error('Speech synthesis error:', e)
+			utterance.onstart = () => {
+				console.log('Speech started')
+				setIsSpeaking(true)
+			}
+
+			utterance.onend = () => {
+				console.log('Speech ended')
 				setIsSpeaking(false)
 			}
 
+			utterance.onerror = e => {
+				// Безопасный вывод информации об ошибке без прямого логирования объекта
+				console.warn('Speech synthesis error occurred')
+
+				// Сохраняем детали ошибки в более безопасном формате
+				try {
+					// В некоторых браузерах e.error содержит причину ошибки как строку
+					if (e && typeof e === 'object' && 'error' in e) {
+						const errorDetail = String(e.error)
+						console.warn(`Error reason: ${errorDetail}`)
+
+						// Прерванный синтез речи — это не настоящая ошибка, а ожидаемое поведение
+						// при переключении или остановке
+						if (errorDetail === 'interrupted') {
+							console.log(
+								'Speech was interrupted, which is normal when changing phrases'
+							)
+						}
+					}
+				} catch {
+					console.warn('Unable to extract error details')
+				}
+
+				setIsSpeaking(false)
+
+				// Пробуем воспроизвести еще раз через небольшую задержку, если ошибка произошла при первой попытке
+				// и она не является прерыванием (interrupted)
+				if (
+					!window.speechSynthesisRetryAttempted &&
+					!(
+						e &&
+						typeof e === 'object' &&
+						'error' in e &&
+						e.error === 'interrupted'
+					)
+				) {
+					console.log('Retrying speech synthesis after error')
+					window.speechSynthesisRetryAttempted = true
+					setTimeout(() => {
+						try {
+							safelySpeakUtterance(utterance)
+						} catch {
+							console.warn('Retry attempt failed')
+						}
+					}, 500)
+				} else {
+					// Сбрасываем флаг после одной попытки повтора
+					window.speechSynthesisRetryAttempted = false
+				}
+			}
+
 			// Speak the text
-			window.speechSynthesis.speak(utterance)
+			console.log('Initiating speech synthesis...')
+			safelySpeakUtterance(utterance)
 		} catch (e) {
 			console.error('Error during speech synthesis:', e)
-			if (isClient) {
-				alert(
-					'Не удалось запустить озвучивание. Возможно, ваш браузер не поддерживает эту функцию.'
-				)
-			}
+			setIsSpeaking(false)
 		}
 	}
+
+	// Компонент для отображения баннера с предупреждением
+	/**
+	 * Компонент отображения предупреждения о недоступности озвучивания
+	 * Показывает информативный баннер с иконкой предупреждения
+	 * @returns JSX элемент с предупреждением
+	 */
+	const SpeechUnavailableWarning = () => (
+		<div className='speech-warning-banner'>
+			<div className='warning-content'>
+				<svg
+					xmlns='http://www.w3.org/2000/svg'
+					width='20'
+					height='20'
+					viewBox='0 0 24 24'
+					fill='none'
+					stroke='currentColor'
+					strokeWidth='2'
+					strokeLinecap='round'
+					strokeLinejoin='round'
+				>
+					<path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'></path>
+					<line x1='12' y1='9' x2='12' y2='13'></line>
+					<line x1='12' y1='17' x2='12.01' y2='17'></line>
+				</svg>
+				<span>Озвучивание не работает в вашем браузере</span>
+			</div>
+		</div>
+	)
 
 	// Base content that's rendered the same way on both server and client
 	const baseContent = (
@@ -318,36 +418,32 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		</div>
 	)
 
-	// On the server and initial client render, return the base content
+	// На сервере всегда рендерим только базовый контент
 	if (!isClient) {
 		return baseContent
 	}
 
-	// Если озвучивание недоступно, показываем UI с возможностью открыть во внешнем браузере
-	if (!speechAvailable) {
-		// Показываем UI без лишних уведомлений,
-		// но с возможностью открыть во внешнем браузере при клике
+	// Рендер в зависимости от доступности озвучивания
+	if (speechAvailable) {
 		return (
 			<div
-				onClick={openInRegularBrowser}
-				className='audio-text-line-interactive speech-unavailable'
-				title='Нажмите, чтобы открыть во внешнем браузере с поддержкой озвучивания'
+				onClick={speakText}
+				className={`audio-text-line-interactive ${
+					isSpeaking ? 'speaking' : ''
+				}`}
 			>
 				{baseContent}
 			</div>
 		)
 	} else {
-		// Если озвучивание доступно, показываем обычный UI
 		return (
 			<>
-				<div
-					onClick={speakText}
-					className={`audio-text-line-interactive ${
-						isSpeaking ? 'speaking' : ''
-					}`}
-				>
-					{baseContent}
-				</div>
+				{showWarning && (
+					<div data-speech-warning='true'>
+						<SpeechUnavailableWarning />
+					</div>
+				)}
+				{baseContent}
 			</>
 		)
 	}

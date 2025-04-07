@@ -210,3 +210,33 @@
 	background-position: center;
 	opacity: 0.8;
 }
+
+/* Стили для баннера с предупреждением о недоступности озвучивания */
+.speech-warning-banner {
+	margin-top: 8px;
+	margin-bottom: 8px;
+	padding: 8px 12px;
+	background-color: rgba(255, 193, 7, 0.1);
+	border: 1px solid rgba(255, 193, 7, 0.3);
+	border-radius: 6px;
+	font-size: 0.85rem;
+	color: var(--secondary, #666);
+}
+
+.warning-content {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.warning-content svg {
+	color: #f59f00;
+	flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+	.speech-warning-banner {
+		padding: 6px 10px;
+		font-size: 0.8rem;
+	}
+}

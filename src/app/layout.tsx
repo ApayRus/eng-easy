@@ -70,7 +70,7 @@ export default function RootLayout({
 	children: React.ReactNode
 }>) {
 	return (
-		<html lang='ru'>
+		<html lang='ru' suppressHydrationWarning>
 			<head>
 				<Script id='telegram-web-app-check' strategy='beforeInteractive'>
 					{`
@@ -500,7 +500,10 @@ export default function RootLayout({
 					`}
 				</Script>
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable}`}>
+			<body
+				className={`${geistSans.variable} ${geistMono.variable}`}
+				suppressHydrationWarning
+			>
 				{children}
 			</body>
 		</html>
