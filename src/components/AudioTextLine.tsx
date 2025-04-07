@@ -215,13 +215,13 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	}
 
 	const speakText = () => {
-		// Если мы в Telegram браузере, перенаправляем во внешний браузер
-		if (isClient && isTelegramBrowser) {
+		// Если озвучивание недоступно, перенаправляем во внешний браузер
+		if (isClient && !speechAvailable) {
 			openInRegularBrowser()
 			return
 		}
 
-		if (!isClient || !speechAvailable || !isSpeechSynthesisAvailable()) {
+		if (!isClient || !isSpeechSynthesisAvailable()) {
 			if (isClient) {
 				alert(
 					'Функция озвучивания не поддерживается вашим браузером. Попробуйте открыть сайт в Chrome, Safari или Firefox.'
@@ -323,20 +323,21 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		return baseContent
 	}
 
-	// Если мы в Telegram браузере, показываем специальный UI
-	if (isTelegramBrowser) {
-		// В Telegram браузере показываем UI без лишних уведомлений,
+	// Если озвучивание недоступно, показываем UI с возможностью открыть во внешнем браузере
+	if (!speechAvailable) {
+		// Показываем UI без лишних уведомлений,
 		// но с возможностью открыть во внешнем браузере при клике
 		return (
 			<div
 				onClick={openInRegularBrowser}
-				className='audio-text-line-interactive'
+				className='audio-text-line-interactive speech-unavailable'
 				title='Нажмите, чтобы открыть во внешнем браузере с поддержкой озвучивания'
 			>
 				{baseContent}
 			</div>
 		)
 	} else {
+		// Если озвучивание доступно, показываем обычный UI
 		return (
 			<>
 				<div

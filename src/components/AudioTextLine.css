@@ -188,15 +188,15 @@
 	}
 }
 
-/* Стили для аудио-текстовых строк в Telegram браузере */
-body.telegram-webapp .audio-text-line-interactive .line-container {
+/* Стили для аудио-текстовых строк, когда озвучивание недоступно */
+.speech-unavailable .line-container {
 	position: relative;
 	border-left: 3px solid var(--primary);
 	padding-left: 12px;
 }
 
 /* Стрелка для внешнего перехода */
-body.telegram-webapp .audio-text-line-interactive:hover .line-container::after {
+.speech-unavailable:hover .line-container::after {
 	content: '';
 	position: absolute;
 	right: 10px;

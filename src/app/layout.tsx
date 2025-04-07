@@ -125,11 +125,6 @@ export default function RootLayout({
 						
 						// Создаем и добавляем баннер с предупреждением, если это Telegram WebApp
 						if (isTelegramWebApp()) {
-							// Добавляем класс к body для стилизации
-							document.addEventListener('DOMContentLoaded', () => {
-								document.body.classList.add('telegram-webapp');
-							});
-							
 							// Проверяем параметр в URL для автоматического открытия во внешнем браузере
 							const urlParams = new URLSearchParams(window.location.search);
 							const autoOpen = urlParams.get('external') === 'true';
@@ -233,19 +228,20 @@ export default function RootLayout({
 									
 									// Текст сообщения
 									const messageSpan = document.createElement('span');
-									messageSpan.textContent = 'Озвучивание не работает в Телеграм браузере. Откройте в обычном браузере: Chrome, Firefox, Safari';
+									messageSpan.textContent = 'Озвучивание не работает в вашем браузере. Откройте в Chrome, Firefox или Safari для полной функциональности.';
 									messageSpan.style.flexGrow = '1';
 									messageSpan.style.padding = '0 10px';
 									
 									// Кнопка открытия во внешнем браузере
 									const openBtn = document.createElement('button');
-									openBtn.textContent = 'Открыть в браузере';
+									openBtn.textContent = 'Открыть в поддерживаемом браузере';
 									openBtn.style.backgroundColor = 'white';
 									openBtn.style.color = '#f44336';
 									openBtn.style.border = 'none';
 									openBtn.style.borderRadius = '4px';
-									openBtn.style.padding = '8px 12px';
+									openBtn.style.padding = '6px 10px';
 									openBtn.style.fontWeight = 'bold';
+									openBtn.style.fontSize = '13px';
 									openBtn.style.cursor = 'pointer';
 									openBtn.style.marginLeft = '10px';
 									openBtn.style.whiteSpace = 'nowrap';
@@ -331,13 +327,33 @@ export default function RootLayout({
 				</Script>
 				<Script id='telegram-browser-button' strategy='afterInteractive'>
 					{`
-						// Добавляем фиксированную кнопку для открытия во внешнем браузере, если мы в Telegram
-						if (window.IS_TELEGRAM_WEBAPP) {
-							document.addEventListener('DOMContentLoaded', () => {
+						// Добавляем фиксированную кнопку для открытия во внешнем браузере, если озвучивание недоступно
+						document.addEventListener('DOMContentLoaded', () => {
+							// Проверяем, может ли работать озвучивание
+							let speechAvailable = false;
+							
+							try {
+								if ('speechSynthesis' in window && 'SpeechSynthesisUtterance' in window) {
+									// Проверим, можно ли создать объект
+									new SpeechSynthesisUtterance('Test');
+									
+									// Проверим наличие голосов или возможность их загрузки
+									window.speechSynthesis.getVoices();
+									
+									// Считаем API доступным
+									speechAvailable = true;
+								}
+							} catch (e) {
+								console.warn('Ошибка при проверке Speech API:', e);
+								speechAvailable = false;
+							}
+							
+							// Если озвучивание недоступно, добавляем кнопку
+							if (!speechAvailable) {
 								// Создаем кнопку для открытия во внешнем браузере
 								const openButton = document.createElement('button');
 								openButton.id = 'open-in-browser-button';
-								openButton.textContent = 'Открыть в браузере';
+								openButton.textContent = 'Открыть с озвучиванием';
 								openButton.style.position = 'fixed';
 								openButton.style.right = '20px';
 								openButton.style.bottom = '20px';
@@ -361,7 +377,7 @@ export default function RootLayout({
 								
 								// Добавляем текст
 								const text = document.createElement('span');
-								text.textContent = 'Открыть в браузере';
+								text.textContent = 'Открыть с озвучиванием';
 								
 								// Собираем кнопку
 								openButton.appendChild(icon);
@@ -479,8 +495,8 @@ export default function RootLayout({
 								// Вызываем функцию при загрузке и при изменении размера окна
 								adjustForMobile();
 								window.addEventListener('resize', adjustForMobile);
-							});
-						}
+							}
+						});
 					`}
 				</Script>
 			</head>
