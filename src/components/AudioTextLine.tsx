@@ -20,18 +20,38 @@ const isSpeechSynthesisAvailable = () => {
 				userAgent.includes('Telegram') ||
 				userAgent.includes('TelegramWebView'))
 
-		// Telegram WebView обычно блокирует или ограничивает SpeechSynthesis
-		if (isTelegramWebView) {
-			console.warn('Telegram WebView detected, speech synthesis may not work')
-			// В Telegram браузере почти всегда API не работает полноценно
-			return false
-		}
-
 		// Основная проверка доступности API
 		const hasAPI =
 			typeof window !== 'undefined' &&
 			'speechSynthesis' in window &&
 			'SpeechSynthesisUtterance' in window
+
+		// Если Telegram WebView, то проведем дополнительные проверки вместо полного блокирования
+		if (isTelegramWebView && hasAPI) {
+			console.log(
+				'Telegram WebView detected, testing speech synthesis availability'
+			)
+
+			// Попробуем создать объект SpeechSynthesisUtterance и получить список голосов
+			try {
+				new SpeechSynthesisUtterance('Test') // Просто проверяем, можно ли создать объект
+
+				// Проверка доступности голосов
+				const voices = window.speechSynthesis.getVoices()
+
+				// Логгируем результат для дебага
+				console.log(
+					'Speech API in Telegram: API available, voices count:',
+					voices ? voices.length : 0
+				)
+
+				// Даже если нет голосов сейчас, они могут загрузиться позже через событие voiceschanged
+				return true
+			} catch (e) {
+				console.warn('Speech API testing in Telegram failed:', e)
+				return false
+			}
+		}
 
 		// Дополнительная проверка - попытка получить голоса
 		if (hasAPI) {
@@ -96,11 +116,6 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 				navigator.userAgent.includes('TelegramWebView')
 
 			setIsTelegramBrowser(isTelegram)
-
-			// Если Telegram, сразу показываем иконку внешнего браузера
-			if (isTelegram) {
-				setSpeechAvailable(false)
-			}
 		}
 
 		// Проверяем доступность SpeechSynthesis API
@@ -200,17 +215,22 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	}
 
 	const speakText = () => {
-		// Если мы в Telegram, всегда предлагаем открыть в обычном браузере
+		// Если мы в Telegram, сначала проверяем, доступен ли Speech API
 		if (isClient && isTelegramBrowser) {
-			// Добавляем плавное мигание иконки внешнего браузера
-			const infoMessage = document.querySelector('.telegram-browser-info')
-			if (infoMessage) {
-				infoMessage.classList.add('highlight-animation')
-				setTimeout(() => {
-					infoMessage.classList.remove('highlight-animation')
-				}, 1000)
+			// Проверка доступности API в Telegram браузере
+			if (!speechAvailable) {
+				// API не доступен, предлагаем открыть в обычном браузере
+				const infoMessage = document.querySelector('.telegram-browser-info')
+				if (infoMessage) {
+					infoMessage.classList.add('highlight-animation')
+					setTimeout(() => {
+						infoMessage.classList.remove('highlight-animation')
+					}, 1000)
+				}
+				return
 			}
-			return
+			// Если API доступен, продолжаем работу как обычно
+			console.log('Attempting to use Speech API in Telegram browser')
 		}
 
 		if (!isClient || !speechAvailable || !isSpeechSynthesisAvailable()) {
@@ -316,7 +336,7 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			onClick={openInRegularBrowser}
 			className='external-browser-button'
 			aria-label='Открыть в браузере'
-			title='Открыть в браузере для озвучивания'
+			title='Открыть в обычном браузере для лучшей поддержки озвучивания'
 		>
 			<svg
 				viewBox='0 0 24 24'
@@ -340,6 +360,31 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 
 	// Если мы в Telegram браузере, показываем специальный UI
 	if (isTelegramBrowser) {
+		// Если Speech API доступен в Telegram, показываем обычный UI с дополнительной информацией
+		if (speechAvailable) {
+			return (
+				<>
+					<div className='audio-text-line-container telegram-browser'>
+						<div
+							onClick={speakText}
+							className={`audio-text-line-interactive ${
+								isSpeaking ? 'speaking' : ''
+							}`}
+						>
+							{baseContent}
+						</div>
+
+						<div className='telegram-browser-info success'>
+							<div className='info-text'>
+								Озвучивание доступно в вашем Telegram браузере!
+							</div>
+						</div>
+					</div>
+				</>
+			)
+		}
+
+		// Если Speech API не доступен, показываем UI с предложением открыть во внешнем браузере
 		return (
 			<>
 				<div className='audio-text-line-container telegram-browser'>

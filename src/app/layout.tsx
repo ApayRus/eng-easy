@@ -167,8 +167,28 @@ export default function RootLayout({
 
 							document.addEventListener('DOMContentLoaded', () => {
 								// Проверяем, может ли работать озвучивание
-								const speechAvailable = 'speechSynthesis' in window && 
-									'SpeechSynthesisUtterance' in window;
+								let speechAvailable = false;
+								
+								try {
+									// Более тщательная проверка SpeechSynthesis API
+									if ('speechSynthesis' in window && 'SpeechSynthesisUtterance' in window) {
+										// Проверим, можно ли создать объект
+										new SpeechSynthesisUtterance('Test');
+										
+										// Проверим наличие голосов или возможность их загрузки
+										const voices = window.speechSynthesis.getVoices();
+										
+										// Даже если нет голосов сейчас, считаем API доступным
+										// (они могут загрузиться позже)
+										speechAvailable = true;
+										
+										// Вывод информации в консоль для дебага
+										console.log('Speech API проверка в Telegram браузере: API доступен, голосов:', voices?.length || 0);
+									}
+								} catch (e) {
+									console.warn('Ошибка при проверке Speech API:', e);
+									speechAvailable = false;
+								}
 								
 								// Если озвучивание недоступно, показываем баннер
 								if (!speechAvailable) {
@@ -189,7 +209,7 @@ export default function RootLayout({
 									banner.style.flexWrap = 'wrap';
 									
 									const messageSpan = document.createElement('span');
-									messageSpan.textContent = 'Для озвучивания рекомендуем открыть сайт в обычном браузере';
+									messageSpan.textContent = 'Озвучивание может быть недоступно в Telegram браузере. Рекомендуем открыть в обычном браузере.';
 									messageSpan.style.flexGrow = '1';
 									messageSpan.style.padding = '0 10px';
 									
@@ -244,6 +264,160 @@ export default function RootLayout({
 									document.body.appendChild(banner);
 									document.body.appendChild(checkboxContainer);
 								}
+							});
+						}
+					`}
+				</Script>
+				<Script id='telegram-browser-button' strategy='afterInteractive'>
+					{`
+						// Добавляем фиксированную кнопку для открытия во внешнем браузере, если мы в Telegram
+						if (window.IS_TELEGRAM_WEBAPP) {
+							document.addEventListener('DOMContentLoaded', () => {
+								// Создаем кнопку для открытия во внешнем браузере
+								const openButton = document.createElement('button');
+								openButton.id = 'open-in-browser-button';
+								openButton.textContent = 'Открыть в браузере';
+								openButton.style.position = 'fixed';
+								openButton.style.right = '20px';
+								openButton.style.bottom = '20px';
+								openButton.style.zIndex = '9999';
+								openButton.style.backgroundColor = '#2563eb';
+								openButton.style.color = 'white';
+								openButton.style.border = 'none';
+								openButton.style.borderRadius = '50px';
+								openButton.style.padding = '10px 16px';
+								openButton.style.fontSize = '14px';
+								openButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+								openButton.style.cursor = 'pointer';
+								openButton.style.display = 'flex';
+								openButton.style.alignItems = 'center';
+								openButton.style.justifyContent = 'center';
+								openButton.style.transition = 'all 0.2s ease';
+								
+								// Добавляем иконку
+								const icon = document.createElement('span');
+								icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
+								
+								// Добавляем текст
+								const text = document.createElement('span');
+								text.textContent = 'Открыть в браузере';
+								
+								// Собираем кнопку
+								openButton.appendChild(icon);
+								openButton.appendChild(text);
+								
+								// Добавляем обработчик события
+								openButton.onclick = function() {
+									const currentUrl = window.location.href;
+									// Добавляем параметр для автоматического открытия
+									let url = currentUrl;
+									if (url.includes('?')) {
+										url += '&external=true';
+									} else {
+										url += '?external=true';
+									}
+									
+									// Открываем во внешнем браузере
+									const a = document.createElement('a');
+									a.href = url;
+									a.target = '_blank';
+									a.rel = 'noopener noreferrer';
+									
+									// Добавляем эффект нажатия
+									openButton.style.transform = 'scale(0.95)';
+									setTimeout(() => {
+										openButton.style.transform = 'scale(1)';
+										a.click();
+									}, 150);
+								};
+								
+								// Анимация появления кнопки через 2 секунды
+								openButton.style.opacity = '0';
+								document.body.appendChild(openButton);
+								
+								setTimeout(() => {
+									openButton.style.opacity = '1';
+									
+									// Добавляем эффект пульсации после появления кнопки
+									const addPulseEffect = () => {
+										// Создаем стиль анимации, если его еще нет
+										if (!document.getElementById('pulse-animation-style')) {
+											const style = document.createElement('style');
+											style.id = 'pulse-animation-style';
+											style.innerHTML = 
+												'@keyframes pulse-button {' +
+												'0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); transform: scale(1); }' +
+												'70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); transform: scale(1.05); }' +
+												'100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); transform: scale(1); }' +
+												'}' +
+												'.pulse-effect {' +
+												'animation: pulse-button 2s infinite;' +
+												'}';
+											document.head.appendChild(style);
+										}
+										
+										// Добавляем класс пульсации к кнопке
+										openButton.classList.add('pulse-effect');
+										
+										// Останавливаем пульсацию при наведении или клике
+										openButton.addEventListener('mouseover', () => {
+											openButton.classList.remove('pulse-effect');
+										});
+										
+										openButton.addEventListener('click', () => {
+											openButton.classList.remove('pulse-effect');
+										});
+									};
+									
+									// Запускаем эффект пульсации через 2 секунды после отображения кнопки
+									setTimeout(addPulseEffect, 2000);
+								}, 1000);
+								
+								// Добавляем эффект при наведении
+								openButton.onmouseover = function() {
+									this.style.backgroundColor = '#1e40af';
+									this.style.transform = 'translateY(-2px)';
+									this.style.boxShadow = '0 6px 12px rgba(0, 0, 0, 0.2)';
+								};
+								
+								openButton.onmouseout = function() {
+									this.style.backgroundColor = '#2563eb';
+									this.style.transform = 'translateY(0)';
+									this.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+								};
+								
+								// Адаптация для мобильных устройств
+								function adjustForMobile() {
+									const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+									
+									if (width <= 768) {
+										// Мобильный вид
+										openButton.style.padding = '8px 12px';
+										openButton.style.fontSize = '12px';
+										openButton.style.right = '10px';
+										openButton.style.bottom = '10px';
+									} else {
+										// Десктопный вид
+										openButton.style.padding = '10px 16px';
+										openButton.style.fontSize = '14px';
+										openButton.style.right = '20px';
+										openButton.style.bottom = '20px';
+									}
+									
+									// Если очень маленький экран, скрываем текст, оставляем только иконку
+									if (width <= 360) {
+										text.style.display = 'none';
+										icon.style.marginRight = '0';
+										openButton.style.padding = '8px';
+									} else {
+										text.style.display = 'inline';
+										icon.style.marginRight = '6px';
+									}
+								}
+								
+								// Вызываем функцию при загрузке и при изменении размера окна
+								adjustForMobile();
+								window.addEventListener('resize', adjustForMobile);
 							});
 						}
 					`}
