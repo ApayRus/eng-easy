@@ -9,9 +9,13 @@ import './page.css'
 
 // Define the types for the page parameters
 interface PageProps {
-	params: {
-		folder: string
-	}
+	params:
+		| Promise<{
+				folder: string
+		  }>
+		| {
+				folder: string
+		  }
 }
 
 // Generate static paths for all content folders at build time
@@ -20,8 +24,9 @@ export function generateStaticParams() {
 	return folders.map(folder => ({ folder }))
 }
 
-export default function FolderPage({ params }: PageProps) {
-	const { folder } = params
+export default async function FolderPage({ params }: PageProps) {
+	const resolvedParams = await Promise.resolve(params)
+	const { folder } = resolvedParams
 	const mdFiles = getMDFilesWithAlias(folder)
 
 	if (mdFiles.length === 0 && !getContentFolders().includes(folder)) {

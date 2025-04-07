@@ -10,10 +10,15 @@ import './page.css'
 
 // Define the types for the page parameters
 interface PageProps {
-	params: {
-		folder: string
-		alias: string
-	}
+	params:
+		| Promise<{
+				folder: string
+				alias: string
+		  }>
+		| {
+				folder: string
+				alias: string
+		  }
 }
 
 // Generate static paths for all content at build time
@@ -35,8 +40,10 @@ export function generateStaticParams() {
 	return paths
 }
 
-export default function ContentPage({ params }: PageProps) {
-	const { folder, alias } = params
+export default async function ContentPage({ params }: PageProps) {
+	// Since params can now be a Promise, we need to await it
+	const resolvedParams = await Promise.resolve(params)
+	const { folder, alias } = resolvedParams
 
 	// Get the specific markdown file by its alias
 	const mdContent = getMDByAlias(folder, alias)
