@@ -236,7 +236,7 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		if (!isClient || !speechAvailable || !isSpeechSynthesisAvailable()) {
 			if (isClient) {
 				alert(
-					'Функция озвучивания не поддерживается вашим браузером. Попробуйте открыть сайт в Chrome, Safari или Firefox.'
+					'Функция озвучивания не поддерживается вашим браузером. Откройте сайт в Chrome, Safari или Firefox.'
 				)
 			}
 			return
@@ -418,12 +418,6 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			>
 				{baseContent}
 			</div>
-			{isClient && !speechAvailable && !isTelegramBrowser && (
-				<div className='speech-unavailable-message'>
-					Функция озвучивания недоступна в вашем браузере. Попробуйте открыть в
-					Chrome, Safari или Firefox.
-				</div>
-			)}
 		</>
 	)
 }
