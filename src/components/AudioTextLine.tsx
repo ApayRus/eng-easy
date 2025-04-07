@@ -363,32 +363,29 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	}
 
 	// Если мы в Telegram браузере, показываем специальный UI
-	if (isTelegramBrowser) {
-		// Если Speech API доступен в Telegram, показываем обычный UI с дополнительной информацией
-		if (speechAvailable) {
-			return (
-				<>
-					<div className='audio-text-line-container telegram-browser'>
-						<div
-							onClick={speakText}
-							className={`audio-text-line-interactive ${
-								isSpeaking ? 'speaking' : ''
-							}`}
-						>
-							{baseContent}
-						</div>
+	// Если Speech API доступен в Telegram, показываем обычный UI с дополнительной информацией
+	if (speechAvailable) {
+		return (
+			<>
+				<div className='audio-text-line-container telegram-browser'>
+					<div
+						onClick={speakText}
+						className={`audio-text-line-interactive ${
+							isSpeaking ? 'speaking' : ''
+						}`}
+					>
+						{baseContent}
+					</div>
 
-						<div className='telegram-browser-info success'>
-							<div className='info-text'>
-								Озвучивание доступно в вашем Telegram браузере!
-							</div>
+					<div className='telegram-browser-info success'>
+						<div className='info-text'>
+							Озвучивание доступно в вашем Telegram браузере!
 						</div>
 					</div>
-				</>
-			)
-		}
-
-		// Если Speech API не доступен, показываем UI с предложением открыть во внешнем браузере
+				</div>
+			</>
+		)
+	} else {
 		return (
 			<>
 				<div className='audio-text-line-container telegram-browser'>
@@ -410,6 +407,8 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			</>
 		)
 	}
+
+	// Если Speech API не доступен, показываем UI с предложением открыть во внешнем браузере
 
 	// На клиенте после гидратации оборачиваем контент интерактивными элементами
 	return (
