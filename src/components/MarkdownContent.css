@@ -298,12 +298,30 @@
 /* AudioTextBlock styles */
 .audio-text-block {
 	margin-bottom: 2rem;
+	padding: 1rem;
+	background-color: #f9f9f9;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.audio-text-block .section-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-bottom: 1rem;
+	color: #555;
+	border-bottom: 2px solid #e0e0e0;
+	padding-bottom: 0.5rem;
+}
+
+.audio-text-block .sentence-block {
+	/* margin-bottom: 0.75rem; */
 }
 
 .section-title {
 	font-size: 1.25rem;
 	font-weight: 600;
 	margin-bottom: 1rem;
+	color: #555;
 }
 
 .english-lines {

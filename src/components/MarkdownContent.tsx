@@ -44,16 +44,22 @@ function determineBlockType(lines: string[]): TextBlockType {
 		return 'quote'
 	}
 
-	// Check if it's an audio block
+	// Check if it's an audio block - improved detection
 	if (
+		// Multiple lines with sentence structure
+		(lines.length > 1 &&
+			lines.every(line => {
+				const trimmedLine = line.trim()
+				return (
+					trimmedLine === '' || // Allow empty lines
+					// Sentence format: starts with capital letter
+					/^[A-Z]/.test(trimmedLine)
+				)
+			})) ||
+		// Format with slashes detection
 		lines.some(line => {
 			const trimmedLine = line.trim()
-			return (
-				// Format with slashes (English / Phonetic / Cyrillic / Russian)
-				(trimmedLine.match(/\s\/\s/g) || []).length >= 2 ||
-				// Simple sentence format (starts with capital, ends with punctuation)
-				/^[A-Z][^.!?]*( [^.!?]*)*[.!?]?$/.test(trimmedLine)
-			)
+			return (trimmedLine.match(/\s\/\s/g) || []).length >= 2
 		})
 	) {
 		return 'audio'
@@ -88,7 +94,6 @@ function renderBlock(
 		folder: string
 		alias: string
 		title?: string
-		russianContent?: string
 	}
 ): ReactNode {
 	const key = `${type}-${content.substring(0, 20).replace(/\s+/g, '-')}`
@@ -145,8 +150,6 @@ function renderBlock(
 					key={key}
 					content={content}
 					sectionTitle={props.title}
-					hideTitle={true}
-					russianContent={props.russianContent}
 				/>
 			)
 		case 'list':
@@ -182,41 +185,36 @@ function renderBlock(
 					key={key}
 					className='border-l-4 border-gray-300 pl-4 italic my-4'
 				>
-					{content.split('\n').map((line, index) => {
-						if (!line.trim()) return null
-						const processedLine = processMarkdownText(line.replace(/^>\s*/, ''))
-						return (
-							<p
-								key={`${key}-${index}`}
-								dangerouslySetInnerHTML={{ __html: processedLine }}
-							/>
-						)
-					})}
+					{content.split('\n').map((line, index) => (
+						<p key={`${key}-${index}`} className='mb-2'>
+							{line.replace(/^>\s*/, '')}
+						</p>
+					))}
 				</blockquote>
-			)
-		case 'paragraph':
-			const processedContent = processMarkdownText(content)
-			return (
-				<p
-					key={key}
-					className='my-4'
-					dangerouslySetInnerHTML={{ __html: processedContent }}
-				/>
 			)
 		default:
 			return (
-				<p key={key} className='my-4'>
-					{content}
-				</p>
+				<p
+					key={key}
+					className='paragraph my-4'
+					dangerouslySetInnerHTML={{ __html: processMarkdownText(content) }}
+				/>
 			)
 	}
 }
 
-// Parse markdown content into blocks
-function parseMarkdownToBlocks(content: string): string[][] {
+// Структура для блоков с информацией о заголовках
+interface ContentBlock {
+	content: string[]
+	title?: string
+}
+
+// Parse markdown content into blocks with titles
+function parseMarkdownToBlocks(content: string): ContentBlock[] {
 	const lines = content.split('\n')
-	const blocks: string[][] = []
+	const blocks: ContentBlock[] = []
 	let currentBlock: string[] = []
+	let currentTitle: string | undefined = undefined
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i].trimEnd()
@@ -224,19 +222,26 @@ function parseMarkdownToBlocks(content: string): string[][] {
 		// Start a new block if this is a heading
 		if (line.startsWith('#')) {
 			if (currentBlock.length > 0) {
-				blocks.push([...currentBlock])
+				blocks.push({
+					content: [...currentBlock],
+					title: currentTitle
+				})
 				currentBlock = []
 			}
-			currentBlock.push(line)
-			blocks.push([...currentBlock])
-			currentBlock = []
+
+			// Extract title text
+			const titleMatch = line.match(/^#+\s+(.+)$/)
+			currentTitle = titleMatch ? titleMatch[1] : undefined
 			continue
 		}
 
 		// Empty line means end of the current block
 		if (line.trim() === '') {
 			if (currentBlock.length > 0) {
-				blocks.push([...currentBlock])
+				blocks.push({
+					content: [...currentBlock],
+					title: currentTitle
+				})
 				currentBlock = []
 			}
 			continue
@@ -248,7 +253,10 @@ function parseMarkdownToBlocks(content: string): string[][] {
 
 	// Add the last block if it's not empty
 	if (currentBlock.length > 0) {
-		blocks.push(currentBlock)
+		blocks.push({
+			content: [...currentBlock],
+			title: currentTitle
+		})
 	}
 
 	return blocks
@@ -265,65 +273,26 @@ export default function MarkdownContent({
 		.split(/^---$/m)
 		.filter(section => section.trim() !== '')
 
-	// Special case for lessons with English/Russian sections
-	if (sections.length === 2 && folder === 'lessons') {
-		const englishSection = sections[0]
-		const russianSection = sections[1]
+	// Process only the English section (before the divider)
+	const activeSection = sections[0]
 
-		// Parse English section into blocks
-		const blocks = parseMarkdownToBlocks(englishSection)
+	// Parse the section into blocks
+	const blocks = parseMarkdownToBlocks(activeSection)
 
-		return (
-			<div className='markdown-content'>
-				{blocks.map((block, blockIndex) => {
-					const blockContent = block.join('\n')
-					const blockType = determineBlockType(block)
-
-					// If this is an audio block, pass the Russian content
-					if (blockType === 'audio') {
-						// Find the next heading to use as a title
-						let title = ''
-						for (let i = blockIndex - 1; i >= 0; i--) {
-							const prevBlock = blocks[i]
-							if (prevBlock.length > 0 && prevBlock[0].startsWith('#')) {
-								title = prevBlock[0].replace(/^#+\s+/, '')
-								break
-							}
-						}
-
-						return (
-							<AudioTextBlock
-								key={`audio-block-${blockIndex}`}
-								content={blockContent}
-								sectionTitle={title}
-								russianContent={russianSection}
-							/>
-						)
-					}
-
-					// Otherwise, render normally
-					return renderBlock(blockContent, blockType, { folder, alias })
-				})}
-			</div>
-		)
-	}
-
-	// Default rendering for other content
+	// Render all blocks
 	return (
 		<div className='markdown-content'>
-			{sections.map((section, sectionIndex) => {
-				// Parse the section into blocks
-				const blocks = parseMarkdownToBlocks(section)
-
-				// Render each block
+			{blocks.map((block, blockIndex) => {
+				const blockContent = block.content.join('\n')
+				const blockType = determineBlockType(block.content)
 				return (
-					<div key={`section-${sectionIndex}`} className='mb-8'>
-						{blocks.map(block => {
-							const blockContent = block.join('\n')
-							const blockType = determineBlockType(block)
-							return renderBlock(blockContent, blockType, { folder, alias })
+					<React.Fragment key={`block-${blockIndex}`}>
+						{renderBlock(blockContent, blockType, {
+							folder,
+							alias,
+							title: block.title
 						})}
-					</div>
+					</React.Fragment>
 				)
 			})}
 		</div>
