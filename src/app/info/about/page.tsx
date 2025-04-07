@@ -5,6 +5,55 @@ import Link from 'next/link'
 import InfoContent from '@/components/InfoContent'
 import './about.css'
 
+// Проверка доступности браузерного API
+const isBrowser = () => typeof window !== 'undefined'
+
+// Безопасная функция для работы с localStorage
+const safeLocalStorage = {
+	getItem: (key: string): string | null => {
+		if (isBrowser()) {
+			try {
+				return localStorage.getItem(key)
+			} catch (e) {
+				console.error('Error accessing localStorage:', e)
+				return null
+			}
+		}
+		return null
+	},
+	setItem: (key: string, value: string): void => {
+		if (isBrowser()) {
+			try {
+				localStorage.setItem(key, value)
+			} catch (e) {
+				console.error('Error setting localStorage:', e)
+			}
+		}
+	}
+}
+
+// Безопасная функция для работы с DOM
+const safeDocument = {
+	addEventListener: (event: string, handler: EventListener): void => {
+		if (isBrowser()) {
+			try {
+				document.addEventListener(event, handler)
+			} catch (e) {
+				console.error('Error adding event listener:', e)
+			}
+		}
+	},
+	removeEventListener: (event: string, handler: EventListener): void => {
+		if (isBrowser()) {
+			try {
+				document.removeEventListener(event, handler)
+			} catch (e) {
+				console.error('Error removing event listener:', e)
+			}
+		}
+	}
+}
+
 // This function runs on the client
 async function getMarkdownContent(lang: string) {
 	try {
@@ -23,26 +72,31 @@ async function getMarkdownContent(lang: string) {
 // Helper function to get user's preferred language
 function getUserPreferredLanguage(): string {
 	// Check if in browser environment
-	if (typeof window === 'undefined') {
+	if (!isBrowser()) {
 		return 'en'
 	}
 
 	// Check localStorage first (user's explicit choice)
-	const storedLang = localStorage.getItem('preferredLanguage')
+	const storedLang = safeLocalStorage.getItem('preferredLanguage')
 	if (storedLang) {
 		return storedLang
 	}
 
 	// Then check browser language
-	let browserLang = navigator.language || 'en'
+	try {
+		let browserLang = navigator.language || 'en'
 
-	// Extract the language code (e.g., 'en-US' -> 'en')
-	browserLang = browserLang.split('-')[0]
+		// Extract the language code (e.g., 'en-US' -> 'en')
+		browserLang = browserLang.split('-')[0]
 
-	// Store this for future reference
-	localStorage.setItem('preferredLanguage', browserLang)
+		// Store this for future reference
+		safeLocalStorage.setItem('preferredLanguage', browserLang)
 
-	return browserLang
+		return browserLang
+	} catch (e) {
+		console.error('Error accessing navigator:', e)
+		return 'en'
+	}
 }
 
 // Flag component for language selection
@@ -111,9 +165,15 @@ export default function AboutPage() {
 			}
 		}
 
-		document.addEventListener('mousedown', handleClickOutside)
+		safeDocument.addEventListener(
+			'mousedown',
+			handleClickOutside as EventListener
+		)
 		return () => {
-			document.removeEventListener('mousedown', handleClickOutside)
+			safeDocument.removeEventListener(
+				'mousedown',
+				handleClickOutside as EventListener
+			)
 		}
 	}, [])
 
@@ -126,7 +186,7 @@ export default function AboutPage() {
 
 		setIsLoading(true)
 		setIsDropdownOpen(false)
-		localStorage.setItem('preferredLanguage', lang)
+		safeLocalStorage.setItem('preferredLanguage', lang)
 		setLanguage(lang)
 
 		const data = await getMarkdownContent(lang)

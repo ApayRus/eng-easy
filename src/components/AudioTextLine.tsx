@@ -8,6 +8,15 @@ interface AudioTextLineProps {
 	text: string
 }
 
+// Проверка доступности Speech API
+const isSpeechSynthesisAvailable = () => {
+	return (
+		typeof window !== 'undefined' &&
+		'speechSynthesis' in window &&
+		'SpeechSynthesisUtterance' in window
+	)
+}
+
 export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const [isClient, setIsClient] = useState(false)
 	const [isSpeaking, setIsSpeaking] = useState(false)
@@ -18,6 +27,8 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 
 	// Function to load and set available voices
 	const loadVoices = useCallback(() => {
+		if (!isSpeechSynthesisAvailable()) return
+
 		const availableVoices = window.speechSynthesis.getVoices()
 		if (availableVoices.length > 0) {
 			setVoices(availableVoices)
@@ -27,6 +38,9 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	useEffect(() => {
 		setIsClient(true)
 
+		// Проверяем доступность SpeechSynthesis API
+		if (!isSpeechSynthesisAvailable()) return
+
 		// Load voices initially
 		loadVoices()
 
@@ -35,7 +49,9 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 
 		// Clean up
 		return () => {
-			window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+			if (isSpeechSynthesisAvailable()) {
+				window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+			}
 		}
 	}, [loadVoices])
 
@@ -66,7 +82,7 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 	}, [voices])
 
 	const speakText = () => {
-		if (!isClient) return
+		if (!isClient || !isSpeechSynthesisAvailable()) return
 
 		// Stop any ongoing speech
 		window.speechSynthesis.cancel()

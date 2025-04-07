@@ -4,24 +4,46 @@ import './page.css'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+// Проверка доступности браузерного API
+const isBrowser = () => typeof window !== 'undefined'
+
+// Безопасная функция для работы с localStorage
+const safeLocalStorage = {
+	getItem: (key: string): string | null => {
+		if (isBrowser()) {
+			try {
+				return localStorage.getItem(key)
+			} catch (e) {
+				console.error('Error accessing localStorage:', e)
+				return null
+			}
+		}
+		return null
+	}
+}
+
 // Helper function to get user's preferred language
 function getUserPreferredLanguage(): string[] {
 	// Default to English if not in browser
-	if (typeof window === 'undefined') {
+	if (!isBrowser()) {
 		return ['en']
 	}
 
 	// Check localStorage first (user's explicit choice)
-	const storedLang = localStorage.getItem('preferredLanguage')
+	const storedLang = safeLocalStorage.getItem('preferredLanguage')
 	if (storedLang) {
 		return [storedLang, 'en'] // Preferred language, then English as fallback
 	}
 
 	// Get browser language
-	let browserLang = navigator.language || 'en'
-	browserLang = browserLang.split('-')[0] // e.g., 'en-US' -> 'en'
-
-	return [browserLang, 'en'] // Browser language, then English as fallback
+	try {
+		let browserLang = navigator.language || 'en'
+		browserLang = browserLang.split('-')[0] // e.g., 'en-US' -> 'en'
+		return [browserLang, 'en'] // Browser language, then English as fallback
+	} catch (e) {
+		console.error('Error accessing navigator:', e)
+		return ['en']
+	}
 }
 
 // Define types for our content items

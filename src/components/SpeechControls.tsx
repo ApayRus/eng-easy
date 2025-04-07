@@ -3,9 +3,36 @@
 import { useState, useEffect } from 'react'
 import './SpeechControls.css'
 
+// Проверка доступности браузерного API
+const isBrowser = () => typeof window !== 'undefined'
+
 // Создаем глобальную переменную для хранения скорости речи
 // Таким образом, значение будет доступно для всех компонентов
 let globalSpeechRate = 1.0
+
+// Безопасная функция для работы с localStorage
+const safeLocalStorage = {
+	getItem: (key: string): string | null => {
+		if (isBrowser()) {
+			try {
+				return localStorage.getItem(key)
+			} catch (e) {
+				console.error('Error accessing localStorage:', e)
+				return null
+			}
+		}
+		return null
+	},
+	setItem: (key: string, value: string): void => {
+		if (isBrowser()) {
+			try {
+				localStorage.setItem(key, value)
+			} catch (e) {
+				console.error('Error setting localStorage:', e)
+			}
+		}
+	}
+}
 
 // Экспортируем функцию для получения текущей скорости речи
 export function getSpeechRate(): number {
@@ -19,7 +46,7 @@ export default function SpeechControls() {
 	useEffect(() => {
 		setIsClient(true)
 		// Проверяем, есть ли сохраненное значение в localStorage
-		const savedRate = localStorage.getItem('speechRate')
+		const savedRate = safeLocalStorage.getItem('speechRate')
 		if (savedRate) {
 			const rate = parseFloat(savedRate)
 			setSpeechRate(rate)
@@ -33,7 +60,7 @@ export default function SpeechControls() {
 		// Обновляем глобальную переменную
 		globalSpeechRate = newRate
 		// Сохраняем в localStorage для персистентности
-		localStorage.setItem('speechRate', newRate.toString())
+		safeLocalStorage.setItem('speechRate', newRate.toString())
 	}
 
 	if (!isClient) {
