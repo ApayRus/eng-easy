@@ -1,0 +1,64 @@
+/* Audio Text Line Component Styles */
+.audio-text-line {
+	transition: all 0.3s ease;
+	/* margin-bottom: 0.5rem; */
+}
+
+.audio-text-line.playing .line-container {
+	background-color: rgba(59, 130, 246, 0.1);
+	border-left: 3px solid #3b82f6;
+}
+
+.english-text {
+	font-weight: 500;
+}
+
+.phonetic-text {
+	font-style: italic;
+	color: #6b7280;
+}
+
+.cyrillic-text {
+	color: #8b5cf6;
+}
+
+.russian-text {
+	color: #047857;
+}
+
+/* Additional hover effects */
+.line-container:hover {
+	transform: translateX(4px);
+	background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Audio icon pulse animation when playing */
+.audio-text-line.playing .play-icon {
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+/* Audio Text Block Container */
+.audio-text-block {
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 24px;
+	background-color: rgba(249, 250, 251, 0.8);
+	border: 1px solid #e5e7eb;
+}
+
+/* Styles for simple English sentences (without phonetics) */
+.audio-text-line .english-text:only-child {
+	flex-grow: 1;
+}

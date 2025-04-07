@@ -1,0 +1,148 @@
+.home-page {
+	padding: 1rem;
+	max-width: 900px;
+	margin: 0 auto;
+}
+
+.home-title {
+	text-align: center;
+	margin-bottom: 1.5rem;
+	font-size: 2.2rem;
+	font-weight: 700;
+	color: #333;
+	letter-spacing: 1px;
+}
+
+/* Общие стили для всех букв */
+.home-title span {
+	display: inline-block;
+	text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.2);
+	transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+
+.home-title span:hover {
+	transform: translateY(-5px);
+	text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Разноцветные буквы для EngEasy */
+.letter-E {
+	color: #e91e63; /* Розовый */
+	font-weight: 800;
+}
+
+.letter-n {
+	color: #2196f3; /* Синий */
+	font-weight: 800;
+}
+
+.letter-g {
+	color: #ff9800; /* Оранжевый */
+	font-weight: 800;
+}
+
+.letter-E2 {
+	color: #4caf50; /* Зеленый */
+	font-weight: 800;
+}
+
+.letter-a {
+	color: #9c27b0; /* Фиолетовый */
+	font-weight: 800;
+}
+
+.letter-s {
+	color: #f44336; /* Красный */
+	font-weight: 800;
+}
+
+.letter-y {
+	color: #009688; /* Бирюзовый */
+	font-weight: 800;
+}
+
+.content-column {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.content-section {
+	background-color: #ffffff;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	padding: 1rem;
+}
+
+.section-title {
+	font-size: 1.2rem;
+	font-weight: 600;
+	margin-bottom: 0.8rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid #eaeaea;
+	color: #444;
+}
+
+.lessons-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 0.8rem;
+}
+
+.lesson-item {
+	background-color: #f5f5f5;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	transition: transform 0.2s, box-shadow 0.2s;
+	padding: 0.8rem;
+}
+
+.lesson-item:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.lesson-link {
+	display: block;
+	color: #2563eb;
+	text-decoration: none;
+	font-weight: 500;
+	font-size: 0.95rem;
+}
+
+.lesson-link:hover {
+	text-decoration: underline;
+}
+
+.other-links {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.other-link {
+	display: block;
+	padding: 0.75rem 1rem;
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	color: #4b5563;
+	font-weight: 500;
+	text-decoration: none;
+	transition: all 0.2s;
+}
+
+.other-link:hover {
+	background-color: #f9fafb;
+	color: #2563eb;
+}
+
+/* Стиль для загрузки */
+.loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+	font-size: 1rem;
+	color: #666;
+}

@@ -1,95 +1,117 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client'
+
+import './page.css'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+
+// Helper function to get user's preferred language
+function getUserPreferredLanguage(): string[] {
+	// Default to English if not in browser
+	if (typeof window === 'undefined') {
+		return ['en']
+	}
+
+	// Check localStorage first (user's explicit choice)
+	const storedLang = localStorage.getItem('preferredLanguage')
+	if (storedLang) {
+		return [storedLang, 'en'] // Preferred language, then English as fallback
+	}
+
+	// Get browser language
+	let browserLang = navigator.language || 'en'
+	browserLang = browserLang.split('-')[0] // e.g., 'en-US' -> 'en'
+
+	return [browserLang, 'en'] // Browser language, then English as fallback
+}
+
+// Define types for our content items
+interface ContentItem {
+	slug: string
+	alias: string
+	title: string
+}
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+	const [infoFolders, setInfoFolders] = useState<ContentItem[]>([])
+	const [lessonsWithTitles, setLessonsWithTitles] = useState<ContentItem[]>([])
+	const [isLoading, setIsLoading] = useState(true)
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+	useEffect(() => {
+		async function loadContent() {
+			try {
+				// Get user's preferred language
+				const preferredLanguages = getUserPreferredLanguage()
+
+				// Fetch content from our API route
+				const response = await fetch(
+					`/api/content?languages=${preferredLanguages.join(',')}`
+				)
+
+				if (!response.ok) {
+					throw new Error('Failed to fetch content')
+				}
+
+				const data = await response.json()
+
+				setInfoFolders(data.info)
+				setLessonsWithTitles(data.lessons)
+			} catch (error) {
+				console.error('Error loading content:', error)
+			} finally {
+				setIsLoading(false)
+			}
+		}
+
+		loadContent()
+	}, [])
+
+	if (isLoading) {
+		return <div className='home-page loading'>Loading...</div>
+	}
+
+	return (
+		<div className='home-page'>
+			<h1 className='home-title'>
+				<span className='letter-E'>E</span>
+				<span className='letter-n'>n</span>
+				<span className='letter-g'>g</span>
+				<span className='letter-E2'>E</span>
+				<span className='letter-a'>a</span>
+				<span className='letter-s'>s</span>
+				<span className='letter-y'>y</span>
+			</h1>
+
+			<div className='content-column'>
+				{/* Info Pages Section */}
+				{infoFolders.length > 0 && (
+					<div className='content-section'>
+						<h2 className='section-title'>Информация</h2>
+						<div className='lessons-list'>
+							{infoFolders.map(page => (
+								<div key={page.slug} className='lesson-item'>
+									<Link href={`/info/${page.alias}`} className='lesson-link'>
+										{page.title}
+									</Link>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+
+				{/* Lessons Section */}
+				<div className='content-section'>
+					<h2 className='section-title'>Уроки</h2>
+					<div className='lessons-list'>
+						{lessonsWithTitles.map(lesson => (
+							<div key={lesson.slug} className='lesson-item'>
+								<Link href={`/lessons/${lesson.alias}`} className='lesson-link'>
+									{lesson.title}
+								</Link>
+							</div>
+						))}
+					</div>
+				</div>
+			</div>
+		</div>
+	)
 }

@@ -1,0 +1,67 @@
+.folder-page {
+	max-width: 42rem;
+	margin: 0 auto;
+	padding: 2rem 1rem;
+}
+
+.back-link {
+	margin-bottom: 2rem;
+}
+
+.back-link a {
+	font-size: 0.875rem;
+	color: #2563eb;
+	text-decoration: none;
+}
+
+.back-link a:hover {
+	text-decoration: underline;
+}
+
+.folder-title {
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin-bottom: 2rem;
+}
+
+.lessons-container {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	padding: 2rem;
+}
+
+.lessons-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.lesson-item {
+	padding-bottom: 1.5rem;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.lesson-item:last-child {
+	padding-bottom: 0;
+	border-bottom: none;
+}
+
+.lesson-link {
+	display: block;
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: #2563eb;
+	text-decoration: none;
+	transition: color 0.2s;
+}
+
+.lesson-link:hover {
+	color: #1e40af;
+	text-decoration: underline;
+}
+
+.no-content {
+	color: #6b7280;
+	text-align: center;
+}
