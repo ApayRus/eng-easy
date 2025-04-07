@@ -7,15 +7,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import './page.css'
 
+// For our internal use, define the shape of params when resolved
+interface ResolvedParams {
+	folder: string
+}
+
 // Define the types for the page parameters
 interface PageProps {
-	params:
-		| Promise<{
-				folder: string
-		  }>
-		| {
-				folder: string
-		  }
+	params: Promise<ResolvedParams> | undefined
 }
 
 // Generate static paths for all content folders at build time
@@ -25,7 +24,7 @@ export function generateStaticParams() {
 }
 
 export default async function FolderPage({ params }: PageProps) {
-	const resolvedParams = await Promise.resolve(params)
+	const resolvedParams = (await Promise.resolve(params)) as ResolvedParams
 	const { folder } = resolvedParams
 	const mdFiles = getMDFilesWithAlias(folder)
 

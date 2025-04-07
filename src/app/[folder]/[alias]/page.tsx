@@ -8,17 +8,15 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import './page.css'
 
+// For our internal use, define the shape of params when resolved
+interface ResolvedParams {
+	folder: string
+	alias: string
+}
+
 // Define the types for the page parameters
 interface PageProps {
-	params:
-		| Promise<{
-				folder: string
-				alias: string
-		  }>
-		| {
-				folder: string
-				alias: string
-		  }
+	params: Promise<ResolvedParams> | undefined
 }
 
 // Generate static paths for all content at build time
@@ -42,7 +40,7 @@ export function generateStaticParams() {
 
 export default async function ContentPage({ params }: PageProps) {
 	// Since params can now be a Promise, we need to await it
-	const resolvedParams = await Promise.resolve(params)
+	const resolvedParams = (await Promise.resolve(params)) as ResolvedParams
 	const { folder, alias } = resolvedParams
 
 	// Get the specific markdown file by its alias
