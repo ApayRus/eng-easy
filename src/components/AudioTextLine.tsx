@@ -236,7 +236,11 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		if (!isClient || !speechAvailable || !isSpeechSynthesisAvailable()) {
 			if (isClient) {
 				alert(
-					'Функция озвучивания не поддерживается вашим браузером. Откройте сайт в Chrome, Safari или Firefox.'
+					JSON.stringify({
+						isClient,
+						speechAvailable,
+						isSpeechSynthesisAvailable
+					})
 				)
 			}
 			return
