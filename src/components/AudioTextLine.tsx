@@ -5,9 +5,16 @@
  */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { getSpeechRate, getCurrentVoice } from './SpeechControls'
 import './AudioTextLine.css'
+
+// Определение для расширенного Window интерфейса
+declare global {
+	interface Window {
+		IS_TELEGRAM_WEBAPP?: boolean
+	}
+}
 
 interface AudioTextLineProps {
 	text: string
@@ -15,7 +22,7 @@ interface AudioTextLineProps {
 
 /**
  * Проверяет доступность Speech API
- * Учитывает особенности Telegram WebView и других браузерах
+ * Учитывает особенности Telegram WebView и других браузеров
  */
 const isSpeechSynthesisAvailable = () => {
 	try {
@@ -84,10 +91,73 @@ const isSpeechSynthesisAvailable = () => {
 export default function AudioTextLine({ text }: AudioTextLineProps) {
 	const [isClient, setIsClient] = useState(false)
 	const [isSpeaking, setIsSpeaking] = useState(false)
+	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
 	const [speechAvailable, setSpeechAvailable] = useState(false) // Изначально false для SSR
+
+	// Используем useRef вместо window property
+	const retryAttemptedRef = useRef(false)
 
 	// Split the text into sections
 	const sections = text.split(' / ').map(section => section.trim())
+
+	/**
+	 * Ищет наиболее подходящий английский голос по приоритетам:
+	 * 1. Нативный голос en-US или en-GB (не localService)
+	 * 2. Любой голос с языком en-US или en-GB
+	 * 3. Любой голос, начинающийся с 'en'
+	 * 4. Первый доступный голос в списке
+	 * @returns Найденный голос SpeechSynthesisVoice или null если голоса не доступны
+	 */
+	const findBestEnglishVoice = useCallback(() => {
+		if (voices.length === 0) return null
+
+		// Priority 1: Try to find a native English voice with 'en-US' or 'en-GB' locale
+		const nativeEnglishVoice = voices.find(
+			voice =>
+				(voice.lang === 'en-US' || voice.lang === 'en-GB') &&
+				!voice.localService
+		)
+		if (nativeEnglishVoice) return nativeEnglishVoice
+
+		// Priority 2: Any voice with 'en-US' or 'en-GB' locale
+		const anyEnglishUsGbVoice = voices.find(
+			voice => voice.lang === 'en-US' || voice.lang === 'en-GB'
+		)
+		if (anyEnglishUsGbVoice) return anyEnglishUsGbVoice
+
+		// Priority 3: Any voice that starts with 'en'
+		const anyEnglishVoice = voices.find(
+			voice => voice.lang && voice.lang.startsWith('en')
+		)
+		if (anyEnglishVoice) return anyEnglishVoice
+
+		// Fallback: Just return the first voice
+		return voices[0]
+	}, [voices])
+
+	// Function to load and set available voices
+	const loadVoices = useCallback(() => {
+		if (!isClient) return
+
+		if (!isSpeechSynthesisAvailable()) {
+			setSpeechAvailable(false)
+			return
+		}
+
+		try {
+			const availableVoices = window.speechSynthesis.getVoices()
+			if (availableVoices && availableVoices.length > 0) {
+				setVoices(availableVoices)
+				setSpeechAvailable(true)
+			} else {
+				// Запланируем повторную попытку
+				setTimeout(loadVoices, 200)
+			}
+		} catch (e) {
+			console.error('Error loading voices:', e)
+			setSpeechAvailable(false)
+		}
+	}, [isClient])
 
 	// Инициализация клиентского состояния и проверка Speech API
 	useEffect(() => {
@@ -98,8 +168,24 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			// Проверяем доступность API
 			const available = isSpeechSynthesisAvailable()
 			setSpeechAvailable(available)
+
+			if (available) {
+				// Загружаем голоса
+				loadVoices()
+
+				// Подписываемся на изменения голосов
+				window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+
+				// Отписываемся при размонтировании
+				return () => {
+					window.speechSynthesis.removeEventListener(
+						'voiceschanged',
+						loadVoices
+					)
+				}
+			}
 		}
-	}, [])
+	}, [loadVoices])
 
 	/**
 	 * Функция для безопасного запуска синтеза речи с учетом состояния синтезатора
@@ -125,70 +211,172 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		}
 	}
 
+	/**
+	 * Основная функция для озвучивания английского текста
+	 * Содержит проверки доступности API, голосов и обработку ошибок
+	 * Реализует механизм повторных попыток при ошибках
+	 */
 	const speakText = () => {
-		if (!speechAvailable) {
-			console.warn('Speech synthesis not available')
+		// Если озвучивание недоступно, ничего не делаем
+		if (!isClient || !speechAvailable) {
+			console.warn('Speech synthesis not available when trying to speak')
 			return
 		}
 
-		// Останавливаем текущее воспроизведение
-		window.speechSynthesis.cancel()
-
-		// Создаем utterance для английского текста
-		const utterance = new SpeechSynthesisUtterance(sections[0])
-
-		// Получаем выбранный голос
-		const selectedVoice = getCurrentVoice()
-		if (selectedVoice) {
-			// Определяем, является ли устройство Android
-			const isAndroid = /Android/i.test(navigator.userAgent)
-
-			if (isAndroid) {
-				// Для Android: используем только необходимые параметры
-				utterance.lang = selectedVoice.lang
-				if ('voiceURI' in utterance) {
-					;(
-						utterance as SpeechSynthesisUtterance & { voiceURI: string }
-					).voiceURI = selectedVoice.voiceURI
-				}
-			} else {
-				// Для десктопа: используем стандартный подход
-				utterance.voice = selectedVoice
+		try {
+			// Дополнительная проверка доступности Speech API
+			if (!window.speechSynthesis) {
+				console.warn('Speech synthesis is not available')
+				return
 			}
 
-			// Для отладки
-			console.log('Voice settings:', {
-				isAndroid,
-				voice: utterance.voice?.name,
-				lang: utterance.lang,
-				voiceURI: (utterance as SpeechSynthesisUtterance & { voiceURI: string })
-					.voiceURI,
-				selectedVoice: selectedVoice.name
-			})
-		}
-
-		// Устанавливаем скорость воспроизведения
-		utterance.rate = getSpeechRate()
-
-		// Устанавливаем обработчики событий
-		utterance.onstart = () => {
-			setIsSpeaking(true)
-			console.log('Started speaking with voice:', utterance.voice?.name)
-		}
-		utterance.onend = () => setIsSpeaking(false)
-		utterance.onerror = event => {
-			setIsSpeaking(false)
-			console.error('Speech error:', event)
-		}
-
-		// Для Android: перезапускаем синтезатор перед воспроизведением
-		if (/Android/i.test(navigator.userAgent)) {
+			// Stop any ongoing speech
 			window.speechSynthesis.cancel()
-			setTimeout(() => {
-				safelySpeakUtterance(utterance)
-			}, 100)
-		} else {
+
+			// Get the English text (first section)
+			const englishText = sections[0]
+			if (!englishText || englishText.trim() === '') {
+				console.warn('No text to speak')
+				return
+			}
+
+			// Убедимся, что у нас есть голоса или запросим их загрузку
+			if (voices.length === 0) {
+				console.log('No voices available, attempting to load voices')
+
+				// Пробуем перезагрузить голоса
+				const availableVoices = window.speechSynthesis.getVoices()
+				if (availableVoices && availableVoices.length > 0) {
+					console.log(`Found ${availableVoices.length} voices on demand`)
+					setVoices(availableVoices)
+				} else {
+					// Если голоса все еще не загружены, повторим попытку через таймаут
+					console.log(
+						'Voices not ready yet, attempting to speak with default voice'
+					)
+				}
+			}
+
+			// Create a new speech synthesis utterance
+			const utterance = new SpeechSynthesisUtterance(englishText)
+
+			// Set language explicitly to English
+			utterance.lang = 'en-US'
+
+			// Get current speech rate from the global control
+			const currentRate = getSpeechRate()
+
+			// Set voice properties
+			utterance.rate = currentRate
+			utterance.pitch = 1.0
+			utterance.volume = 1.0
+
+			// Получаем выбранный пользователем голос из глобального состояния
+			const selectedVoice = getCurrentVoice()
+
+			if (selectedVoice) {
+				// Определяем, является ли устройство Android
+				const isAndroid = /Android/i.test(navigator.userAgent)
+
+				if (isAndroid) {
+					// Для Android: используем только необходимые параметры
+					utterance.lang = selectedVoice.lang
+					if ('voiceURI' in utterance) {
+						;(
+							utterance as SpeechSynthesisUtterance & { voiceURI: string }
+						).voiceURI = selectedVoice.voiceURI
+					}
+				} else {
+					// Для десктопа: используем стандартный подход
+					utterance.voice = selectedVoice
+				}
+
+				console.log(
+					`Using selected voice: ${selectedVoice.name} (${selectedVoice.lang}) at rate: ${currentRate}`
+				)
+			} else {
+				// Если пользователь не выбрал голос, используем наш алгоритм поиска
+				const bestVoice = findBestEnglishVoice()
+				if (bestVoice) {
+					utterance.voice = bestVoice
+					console.log(
+						`Using default voice: ${bestVoice.name} (${bestVoice.lang}) at rate: ${currentRate}`
+					)
+				} else {
+					console.log(
+						'No suitable English voice found, using system default voice'
+					)
+				}
+			}
+
+			// Set up event listeners
+			utterance.onstart = () => {
+				console.log('Speech started')
+				setIsSpeaking(true)
+			}
+
+			utterance.onend = () => {
+				console.log('Speech ended')
+				setIsSpeaking(false)
+			}
+
+			utterance.onerror = e => {
+				// Безопасный вывод информации об ошибке без прямого логирования объекта
+				console.warn('Speech synthesis error occurred')
+
+				// Сохраняем детали ошибки в более безопасном формате
+				try {
+					// В некоторых браузерах e.error содержит причину ошибки как строку
+					if (e && typeof e === 'object' && 'error' in e) {
+						const errorDetail = String(e.error)
+						console.warn(`Error reason: ${errorDetail}`)
+
+						// Прерванный синтез речи — это не настоящая ошибка, а ожидаемое поведение
+						// при переключении или остановке
+						if (errorDetail === 'interrupted') {
+							console.log(
+								'Speech was interrupted, which is normal when changing phrases'
+							)
+						}
+					}
+				} catch {
+					console.warn('Unable to extract error details')
+				}
+
+				setIsSpeaking(false)
+
+				// Пробуем воспроизвести еще раз через небольшую задержку, если ошибка произошла при первой попытке
+				// и она не является прерыванием (interrupted)
+				if (
+					!retryAttemptedRef.current &&
+					!(
+						e &&
+						typeof e === 'object' &&
+						'error' in e &&
+						e.error === 'interrupted'
+					)
+				) {
+					console.log('Retrying speech synthesis after error')
+					retryAttemptedRef.current = true
+					setTimeout(() => {
+						try {
+							safelySpeakUtterance(utterance)
+						} catch {
+							console.warn('Retry attempt failed')
+						}
+					}, 500)
+				} else {
+					// Сбрасываем флаг после одной попытки повтора
+					retryAttemptedRef.current = false
+				}
+			}
+
+			// Speak the text
+			console.log('Initiating speech synthesis...')
 			safelySpeakUtterance(utterance)
+		} catch (e) {
+			console.error('Error during speech synthesis:', e)
+			setIsSpeaking(false)
 		}
 	}
 
