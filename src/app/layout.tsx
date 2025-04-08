@@ -69,7 +69,15 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='ru' suppressHydrationWarning>
-			<head></head>
+			<head>
+				{/* Eruda будет загружен на всех страницах */}
+				{process.env.NODE_ENV === 'development' && (
+					<>
+						<script src='//cdn.jsdelivr.net/npm/eruda' />
+						<script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
+					</>
+				)}
+			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable}`}
 				suppressHydrationWarning

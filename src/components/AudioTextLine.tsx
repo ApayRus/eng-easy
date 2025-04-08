@@ -231,7 +231,7 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			}
 
 			// Stop any ongoing speech
-			window.speechSynthesis.cancel()
+		window.speechSynthesis.cancel()
 
 			// Get the English text (first section)
 			const englishText = sections[0]
@@ -272,24 +272,24 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			utterance.volume = 1.0
 
 			// Получаем выбранный пользователем голос из глобального состояния
-			const selectedVoice = getCurrentVoice()
+		const selectedVoice = getCurrentVoice()
 
-			if (selectedVoice) {
-				// Определяем, является ли устройство Android
-				const isAndroid = /Android/i.test(navigator.userAgent)
+		if (selectedVoice) {
+			// Определяем, является ли устройство Android
+			const isAndroid = /Android/i.test(navigator.userAgent)
 
-				if (isAndroid) {
-					// Для Android: используем только необходимые параметры
-					utterance.lang = selectedVoice.lang
-					if ('voiceURI' in utterance) {
-						;(
-							utterance as SpeechSynthesisUtterance & { voiceURI: string }
-						).voiceURI = selectedVoice.voiceURI
-					}
-				} else {
-					// Для десктопа: используем стандартный подход
-					utterance.voice = selectedVoice
+			if (isAndroid) {
+				// Для Android: используем только необходимые параметры
+				utterance.lang = selectedVoice.lang
+				if ('voiceURI' in utterance) {
+					;(
+						utterance as SpeechSynthesisUtterance & { voiceURI: string }
+					).voiceURI = selectedVoice.voiceURI
 				}
+			} else {
+				// Для десктопа: используем стандартный подход
+				utterance.voice = selectedVoice
+			}
 
 				console.log(
 					`Using selected voice: ${selectedVoice.name} (${selectedVoice.lang}) at rate: ${currentRate}`
@@ -310,14 +310,14 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			}
 
 			// Set up event listeners
-			utterance.onstart = () => {
+		utterance.onstart = () => {
 				console.log('Speech started')
-				setIsSpeaking(true)
-			}
+			setIsSpeaking(true)
+		}
 
 			utterance.onend = () => {
 				console.log('Speech ended')
-				setIsSpeaking(false)
+			setIsSpeaking(false)
 			}
 
 			utterance.onerror = e => {
@@ -358,14 +358,14 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 				) {
 					console.log('Retrying speech synthesis after error')
 					retryAttemptedRef.current = true
-					setTimeout(() => {
+			setTimeout(() => {
 						try {
-							safelySpeakUtterance(utterance)
+				safelySpeakUtterance(utterance)
 						} catch {
 							console.warn('Retry attempt failed')
 						}
 					}, 500)
-				} else {
+		} else {
 					// Сбрасываем флаг после одной попытки повтора
 					retryAttemptedRef.current = false
 				}

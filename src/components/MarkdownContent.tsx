@@ -14,22 +14,11 @@ type TextBlockType = 'audio' | 'translation'
 
 // Function to determine the type of a block
 function determineBlockType(lines: string[], title?: string): TextBlockType {
-	// Debug logging
-	console.log(
-		'Determining block type for lines:',
-		lines.slice(0, 2),
-		'title:',
-		title
-	)
-
 	// Check if current block's title is "Перевод"
 	if (title === 'Перевод') {
-		console.log('Block type: TRANSLATION')
 		return 'translation'
 	}
 
-	// Default to audio block
-	console.log('Block type: AUDIO')
 	return 'audio'
 }
 
@@ -167,15 +156,6 @@ export default function MarkdownContent({
 
 	// Parse the section into blocks
 	const blocks = parseMarkdownToBlocks(activeSection)
-
-	// Debug logging for blocks
-	console.log(
-		'Parsed blocks:',
-		blocks.map(block => ({
-			title: block.title,
-			content: block.content.join('\n').substring(0, 50) + '...'
-		}))
-	)
 
 	// Render all blocks
 	return (
