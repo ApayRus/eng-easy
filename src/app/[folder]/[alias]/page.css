@@ -58,7 +58,7 @@
 
 /* Добавляем отступ для статьи */
 article.prose {
-	padding-top: 25px; /* Увеличенный отступ сверху */
+	padding-top: 20px; /* Уменьшенный отступ сверху, так как баннер уже создает пространство */
 	margin-top: 10px;
 }
 
@@ -93,12 +93,14 @@ article.prose h3:first-child {
 /* Стили для предупреждения о недоступности озвучивания на странице */
 .speech-warning-banner {
 	max-width: 65ch;
-	margin: 1rem auto 1.5rem;
+	margin: 70px auto 1.5rem; /* Увеличенный отступ сверху, чтобы баннер был ниже верхней панели */
 	border-radius: 8px;
 	background-color: rgba(255, 193, 7, 0.15);
 	border: 1px solid rgba(255, 193, 7, 0.4);
 	padding: 0.75rem 1rem;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+	position: relative; /* Добавляем относительное позиционирование */
+	z-index: 5; /* Устанавливаем z-index ниже чем у верхней панели (10), но выше основного контента */
 }
 
 .warning-content {
@@ -128,7 +130,7 @@ article.prose h3:first-child {
 
 @media (max-width: 640px) {
 	.speech-warning-banner {
-		margin: 0.75rem 1rem 1rem;
+		margin: 60px 1rem 1rem; /* Уменьшенный отступ для мобильных устройств, но все еще достаточный */
 		padding: 0.6rem 0.8rem;
 	}
 
