@@ -99,6 +99,7 @@ function parseMarkdownToBlocks(content: string): ContentBlock[] {
 
 		// Start a new block if this is a heading
 		if (line.startsWith('#')) {
+			// If we have content, save the current block
 			if (currentBlock.length > 0) {
 				blocks.push({
 					content: [...currentBlock],
@@ -109,7 +110,9 @@ function parseMarkdownToBlocks(content: string): ContentBlock[] {
 
 			// Extract title text
 			const titleMatch = line.match(/^#+\s+(.+)$/)
-			currentTitle = titleMatch ? titleMatch[1] : undefined
+			if (titleMatch) {
+				currentTitle = titleMatch[1]
+			}
 			continue
 		}
 
@@ -121,6 +124,7 @@ function parseMarkdownToBlocks(content: string): ContentBlock[] {
 					title: currentTitle
 				})
 				currentBlock = []
+				currentTitle = undefined
 			}
 			continue
 		}
@@ -154,6 +158,13 @@ export default function MarkdownContent({
 	// Process only the English section (before the divider)
 	const activeSection = sections[0]
 
+	// Extract the main title from the active section
+	let pageTitle = ''
+	const titleMatch = activeSection.match(/^#\s+(.+)$/m)
+	if (titleMatch) {
+		pageTitle = titleMatch[1]
+	}
+
 	// Parse the section into blocks
 	const blocks = parseMarkdownToBlocks(activeSection)
 
@@ -169,9 +180,14 @@ export default function MarkdownContent({
 	// Render all blocks
 	return (
 		<div className='markdown-content'>
+			{/* Render lesson title at the top */}
+			{pageTitle && <h1 className='lesson-title'>{pageTitle}</h1>}
+
+			{/* Render all blocks with their content */}
 			{blocks.map((block, blockIndex) => {
 				const blockContent = block.content.join('\n')
 				const blockType = determineBlockType(block.content, block.title)
+
 				return (
 					<React.Fragment key={`block-${blockIndex}`}>
 						{renderBlock(blockContent, blockType, {

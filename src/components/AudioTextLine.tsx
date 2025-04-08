@@ -134,25 +134,62 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		// Останавливаем текущее воспроизведение
 		window.speechSynthesis.cancel()
 
-		// Создаем utterance только для английского текста (первая секция)
+		// Создаем utterance для английского текста
 		const utterance = new SpeechSynthesisUtterance(sections[0])
 
-		// Используем выбранный голос или голос по умолчанию
+		// Получаем выбранный голос
 		const selectedVoice = getCurrentVoice()
 		if (selectedVoice) {
-			utterance.voice = selectedVoice
+			// Определяем, является ли устройство Android
+			const isAndroid = /Android/i.test(navigator.userAgent)
+
+			if (isAndroid) {
+				// Для Android: используем только необходимые параметры
+				utterance.lang = selectedVoice.lang
+				if ('voiceURI' in utterance) {
+					;(
+						utterance as SpeechSynthesisUtterance & { voiceURI: string }
+					).voiceURI = selectedVoice.voiceURI
+				}
+			} else {
+				// Для десктопа: используем стандартный подход
+				utterance.voice = selectedVoice
+			}
+
+			// Для отладки
+			console.log('Voice settings:', {
+				isAndroid,
+				voice: utterance.voice?.name,
+				lang: utterance.lang,
+				voiceURI: (utterance as SpeechSynthesisUtterance & { voiceURI: string })
+					.voiceURI,
+				selectedVoice: selectedVoice.name
+			})
 		}
 
 		// Устанавливаем скорость воспроизведения
 		utterance.rate = getSpeechRate()
 
 		// Устанавливаем обработчики событий
-		utterance.onstart = () => setIsSpeaking(true)
+		utterance.onstart = () => {
+			setIsSpeaking(true)
+			console.log('Started speaking with voice:', utterance.voice?.name)
+		}
 		utterance.onend = () => setIsSpeaking(false)
-		utterance.onerror = () => setIsSpeaking(false)
+		utterance.onerror = event => {
+			setIsSpeaking(false)
+			console.error('Speech error:', event)
+		}
 
-		// Запускаем воспроизведение
-		safelySpeakUtterance(utterance)
+		// Для Android: перезапускаем синтезатор перед воспроизведением
+		if (/Android/i.test(navigator.userAgent)) {
+			window.speechSynthesis.cancel()
+			setTimeout(() => {
+				safelySpeakUtterance(utterance)
+			}, 100)
+		} else {
+			safelySpeakUtterance(utterance)
+		}
 	}
 
 	// Base content that's rendered the same way on both server and client
