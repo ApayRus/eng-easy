@@ -59,12 +59,19 @@ async function getMarkdownContent(lang: string) {
 	try {
 		// We're doing this on the client side, so we need to fetch the content
 		const response = await fetch(
-			`/api/content/info?lang=${lang}&page=how-to-use`
+			`/api/content/info?lang=${lang}&page=how-to-use`,
+			{
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json'
+				}
+			}
 		)
 		if (!response.ok) {
-			throw new Error('Failed to fetch content')
+			throw new Error(`Failed to fetch content: ${response.status}`)
 		}
-		return await response.json()
+		const data = await response.json()
+		return data
 	} catch (error) {
 		console.error('Error fetching content:', error)
 		return null
@@ -75,7 +82,7 @@ async function getMarkdownContent(lang: string) {
 function getUserPreferredLanguage(): string {
 	// Check if in browser environment
 	if (!isBrowser()) {
-		return 'en'
+		return 'ru' // Default to Russian for better compatibility
 	}
 
 	// Check localStorage first (user's explicit choice)
@@ -86,18 +93,15 @@ function getUserPreferredLanguage(): string {
 
 	// Then check browser language
 	try {
-		let browserLang = navigator.language || 'en'
-
+		let browserLang = navigator.language || 'ru'
 		// Extract the language code (e.g., 'en-US' -> 'en')
 		browserLang = browserLang.split('-')[0]
-
 		// Store this for future reference
 		safeLocalStorage.setItem('preferredLanguage', browserLang)
-
 		return browserLang
 	} catch (e) {
 		console.error('Error accessing navigator:', e)
-		return 'en'
+		return 'ru' // Default to Russian for better compatibility
 	}
 }
 
@@ -133,26 +137,46 @@ function FlagButton({
 const languages = [
 	{ code: 'en', emoji: '🇬🇧', name: 'English' },
 	{ code: 'ru', emoji: '🇷🇺', name: 'Русский' }
-	// Add more languages here in the future
 ]
 
 export default function HowToUsePage() {
 	const [content, setContent] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
-	const [language, setLanguage] = useState('en')
+	const [error, setError] = useState<string | null>(null)
+	const [language, setLanguage] = useState('ru') // Default to Russian
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)
 
 	// Load content in preferred language
 	useEffect(() => {
-		async function loadContent() {
-			setIsLoading(true)
-			const preferredLang = getUserPreferredLanguage()
-			setLanguage(preferredLang)
+		let mounted = true
 
-			const data = await getMarkdownContent(preferredLang)
-			setContent(data?.content || null)
-			setIsLoading(false)
+		async function loadContent() {
+			if (!mounted) return
+
+			try {
+				setIsLoading(true)
+				setError(null)
+				const preferredLang = getUserPreferredLanguage()
+				setLanguage(preferredLang)
+
+				const data = await getMarkdownContent(preferredLang)
+				if (!mounted) return
+
+				if (data?.content) {
+					setContent(data.content)
+				} else {
+					setError('Не удалось загрузить контент')
+				}
+			} catch (err) {
+				if (!mounted) return
+				console.error('Error loading content:', err)
+				setError('Произошла ошибка при загрузке страницы')
+			} finally {
+				if (mounted) {
+					setIsLoading(false)
+				}
+			}
 		}
 
 		loadContent()
@@ -171,7 +195,9 @@ export default function HowToUsePage() {
 			'mousedown',
 			handleClickOutside as EventListener
 		)
+
 		return () => {
+			mounted = false
 			safeDocument.removeEventListener(
 				'mousedown',
 				handleClickOutside as EventListener
@@ -186,19 +212,30 @@ export default function HowToUsePage() {
 			return
 		}
 
-		setIsLoading(true)
-		setIsDropdownOpen(false)
-		safeLocalStorage.setItem('preferredLanguage', lang)
-		setLanguage(lang)
+		try {
+			setIsLoading(true)
+			setError(null)
+			setIsDropdownOpen(false)
+			safeLocalStorage.setItem('preferredLanguage', lang)
+			setLanguage(lang)
 
-		const data = await getMarkdownContent(lang)
-		setContent(data?.content || null)
-		setIsLoading(false)
+			const data = await getMarkdownContent(lang)
+			if (data?.content) {
+				setContent(data.content)
+			} else {
+				setError('Не удалось загрузить контент')
+			}
+		} catch (err) {
+			console.error('Error switching language:', err)
+			setError('Произошла ошибка при переключении языка')
+		} finally {
+			setIsLoading(false)
+		}
 	}
 
 	// Find current language details
 	const currentLanguage =
-		languages.find(lang => lang.code === language) || languages[0]
+		languages.find(lang => lang.code === language) || languages[1] // Default to Russian
 
 	return (
 		<div className='about-container'>
@@ -252,13 +289,15 @@ export default function HowToUsePage() {
 			</div>
 
 			{isLoading ? (
-				<div className='text-center py-8'>Loading...</div>
+				<div className='text-center py-8'>Загрузка...</div>
+			) : error ? (
+				<div className='text-center py-8 text-red-500'>{error}</div>
 			) : content ? (
 				<div className='bg-white rounded-lg shadow-md p-6'>
 					<InfoContent content={content} />
 				</div>
 			) : (
-				<p>Content not found.</p>
+				<div className='text-center py-8'>Контент не найден</div>
 			)}
 		</div>
 	)
