@@ -6,7 +6,7 @@
 .translationButton {
 	display: inline-flex;
 	align-items: center;
-	color: #2563eb;
+	color: var(--primary);
 	text-decoration: none;
 	background: none;
 	border: none;
@@ -18,7 +18,7 @@
 }
 
 .translationButton:hover {
-	color: #1e40af;
+	color: var(--primary-dark);
 	text-decoration: none;
 }
 
@@ -34,4 +34,34 @@
 	margin-top: 0.5rem;
 	white-space: pre-wrap;
 	word-wrap: break-word;
+	line-height: 1.6; /* Increased line spacing */
+}
+
+/* Text styles for translation parts */
+.translationPrimary {
+	/* No special color - will inherit from parent (translationContent) */
+	color: inherit;
+}
+
+.translationSecondary {
+	color: var(--primary); /* Use the primary color variable */
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+	.translationContent {
+		color: rgba(
+			209,
+			213,
+			219,
+			0.85
+		); /* Softer gray with transparency for dark mode */
+	}
+
+	.translationPrimary {
+		/* Will inherit from parent in dark mode too */
+		color: inherit;
+	}
+
+	/* No need to override .translationSecondary in dark mode as it will automatically use dark mode --primary */
 }

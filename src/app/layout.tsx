@@ -92,6 +92,42 @@ export default function RootLayout({
 							if (isDebug || isTelegramWebView) {
 								console.log('Debug mode activated');
 								eruda.init();
+								
+								// Фикс для предотвращения ошибок Speech API
+								if (isTelegramWebView) {
+									// Добавляем безопасные заглушки для Speech API
+									if (window.speechSynthesis === undefined) {
+										window.speechSynthesis = {
+											getVoices: function() { return []; },
+											addEventListener: function() {},
+											removeEventListener: function() {},
+											cancel: function() {},
+											speak: function() {},
+											speaking: false,
+											paused: false,
+											pending: false
+										};
+									} else if (typeof window.speechSynthesis.getVoices !== 'function') {
+										window.speechSynthesis.getVoices = function() { return []; };
+									}
+									
+									// Проверяем наличие SpeechSynthesisUtterance
+									if (window.SpeechSynthesisUtterance === undefined) {
+										window.SpeechSynthesisUtterance = function(text) {
+											this.text = text;
+											this.lang = 'en-US';
+											this.voice = null;
+											this.rate = 1;
+											this.pitch = 1;
+											this.volume = 1;
+											this.onstart = null;
+											this.onend = null;
+											this.onerror = null;
+										};
+									}
+									
+									console.log('Applied Speech API fixes for Telegram WebView');
+								}
 							}
 						} catch (e) {
 							console.error('Error initializing debug tools:', e);

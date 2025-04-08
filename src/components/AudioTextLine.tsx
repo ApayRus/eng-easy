@@ -51,14 +51,23 @@ const isSpeechSynthesisAvailable = () => {
 			try {
 				new SpeechSynthesisUtterance('Test') // Просто проверяем, можно ли создать объект
 
-				// Проверка доступности голосов
-				const voices = window.speechSynthesis.getVoices()
+				// Проверка доступности голосов - используем защищенный подход
+				try {
+					// Сначала проверяем наличие метода getVoices
+					if (typeof window.speechSynthesis.getVoices === 'function') {
+						const voices = window.speechSynthesis.getVoices()
 
-				// Логгируем результат для дебага
-				console.log(
-					'Speech API in Telegram: API available, voices count:',
-					voices ? voices.length : 0
-				)
+						// Логгируем результат для дебага
+						console.log(
+							'Speech API in Telegram: API available, voices count:',
+							voices ? voices.length : 0
+						)
+					} else {
+						console.warn('getVoices method is not available in this browser')
+					}
+				} catch (voiceError) {
+					console.warn('Error getting voices:', voiceError)
+				}
 
 				// Даже если нет голосов сейчас, они могут загрузиться позже через событие voiceschanged
 				return true
@@ -71,13 +80,22 @@ const isSpeechSynthesisAvailable = () => {
 		// Дополнительная проверка - попытка получить голоса
 		if (hasAPI) {
 			// Некоторые браузеры возвращают пустой массив, если API не полностью поддерживается
-			const voices = window.speechSynthesis.getVoices()
+			try {
+				// Сначала проверяем наличие метода getVoices
+				if (typeof window.speechSynthesis.getVoices === 'function') {
+					const voices = window.speechSynthesis.getVoices()
 
-			// В некоторых браузерах getVoices() может возвращаться асинхронно
-			// В этом случае мы будем считать, что API доступен, пока не доказано обратное
-			if (voices && voices.length === 0) {
-				// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
-				console.log('No voices available immediately, may load later')
+					// В некоторых браузерах getVoices() может возвращаться асинхронно
+					// В этом случае мы будем считать, что API доступен, пока не доказано обратное
+					if (voices && voices.length === 0) {
+						// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
+						console.log('No voices available immediately, may load later')
+					}
+				} else {
+					console.warn('getVoices method is not available in this browser')
+				}
+			} catch (voiceError) {
+				console.warn('Error getting voices:', voiceError)
 			}
 		}
 
@@ -145,6 +163,13 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 		}
 
 		try {
+			// Проверка наличия метода getVoices
+			if (typeof window.speechSynthesis.getVoices !== 'function') {
+				console.warn('getVoices method is not available in this browser')
+				setSpeechAvailable(false)
+				return
+			}
+
 			const availableVoices = window.speechSynthesis.getVoices()
 			if (availableVoices && availableVoices.length > 0) {
 				setVoices(availableVoices)
@@ -173,15 +198,29 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 				// Загружаем голоса
 				loadVoices()
 
-				// Подписываемся на изменения голосов
-				window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+				// Проверяем наличие события voiceschanged и подписываемся на него
+				try {
+					if (
+						window.speechSynthesis &&
+						'addEventListener' in window.speechSynthesis
+					) {
+						window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
 
-				// Отписываемся при размонтировании
-				return () => {
-					window.speechSynthesis.removeEventListener(
-						'voiceschanged',
-						loadVoices
-					)
+						// Отписываемся при размонтировании
+						return () => {
+							if (
+								window.speechSynthesis &&
+								'removeEventListener' in window.speechSynthesis
+							) {
+								window.speechSynthesis.removeEventListener(
+									'voiceschanged',
+									loadVoices
+								)
+							}
+						}
+					}
+				} catch (e) {
+					console.warn('Error setting up voice event listeners:', e)
 				}
 			}
 		}
@@ -231,7 +270,11 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			}
 
 			// Stop any ongoing speech
-		window.speechSynthesis.cancel()
+			try {
+				window.speechSynthesis.cancel()
+			} catch (e) {
+				console.warn('Error cancelling speech:', e)
+			}
 
 			// Get the English text (first section)
 			const englishText = sections[0]
@@ -245,15 +288,24 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 				console.log('No voices available, attempting to load voices')
 
 				// Пробуем перезагрузить голоса
-				const availableVoices = window.speechSynthesis.getVoices()
-				if (availableVoices && availableVoices.length > 0) {
-					console.log(`Found ${availableVoices.length} voices on demand`)
-					setVoices(availableVoices)
-				} else {
-					// Если голоса все еще не загружены, повторим попытку через таймаут
-					console.log(
-						'Voices not ready yet, attempting to speak with default voice'
-					)
+				try {
+					// Проверка наличия метода getVoices
+					if (typeof window.speechSynthesis.getVoices === 'function') {
+						const availableVoices = window.speechSynthesis.getVoices()
+						if (availableVoices && availableVoices.length > 0) {
+							console.log(`Found ${availableVoices.length} voices on demand`)
+							setVoices(availableVoices)
+						} else {
+							// Если голоса все еще не загружены, повторим попытку через таймаут
+							console.log(
+								'Voices not ready yet, attempting to speak with default voice'
+							)
+						}
+					} else {
+						console.warn('getVoices method is not available in this browser')
+					}
+				} catch (e) {
+					console.warn('Error loading voices on demand:', e)
 				}
 			}
 
@@ -272,24 +324,24 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			utterance.volume = 1.0
 
 			// Получаем выбранный пользователем голос из глобального состояния
-		const selectedVoice = getCurrentVoice()
+			const selectedVoice = getCurrentVoice()
 
-		if (selectedVoice) {
-			// Определяем, является ли устройство Android
-			const isAndroid = /Android/i.test(navigator.userAgent)
+			if (selectedVoice) {
+				// Определяем, является ли устройство Android
+				const isAndroid = /Android/i.test(navigator.userAgent)
 
-			if (isAndroid) {
-				// Для Android: используем только необходимые параметры
-				utterance.lang = selectedVoice.lang
-				if ('voiceURI' in utterance) {
-					;(
-						utterance as SpeechSynthesisUtterance & { voiceURI: string }
-					).voiceURI = selectedVoice.voiceURI
+				if (isAndroid) {
+					// Для Android: используем только необходимые параметры
+					utterance.lang = selectedVoice.lang
+					if ('voiceURI' in utterance) {
+						;(
+							utterance as SpeechSynthesisUtterance & { voiceURI: string }
+						).voiceURI = selectedVoice.voiceURI
+					}
+				} else {
+					// Для десктопа: используем стандартный подход
+					utterance.voice = selectedVoice
 				}
-			} else {
-				// Для десктопа: используем стандартный подход
-				utterance.voice = selectedVoice
-			}
 
 				console.log(
 					`Using selected voice: ${selectedVoice.name} (${selectedVoice.lang}) at rate: ${currentRate}`
@@ -310,14 +362,14 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 			}
 
 			// Set up event listeners
-		utterance.onstart = () => {
+			utterance.onstart = () => {
 				console.log('Speech started')
-			setIsSpeaking(true)
-		}
+				setIsSpeaking(true)
+			}
 
 			utterance.onend = () => {
 				console.log('Speech ended')
-			setIsSpeaking(false)
+				setIsSpeaking(false)
 			}
 
 			utterance.onerror = e => {
@@ -358,14 +410,14 @@ export default function AudioTextLine({ text }: AudioTextLineProps) {
 				) {
 					console.log('Retrying speech synthesis after error')
 					retryAttemptedRef.current = true
-			setTimeout(() => {
+					setTimeout(() => {
 						try {
-				safelySpeakUtterance(utterance)
+							safelySpeakUtterance(utterance)
 						} catch {
 							console.warn('Retry attempt failed')
 						}
 					}, 500)
-		} else {
+				} else {
 					// Сбрасываем флаг после одной попытки повтора
 					retryAttemptedRef.current = false
 				}

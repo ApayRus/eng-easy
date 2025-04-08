@@ -15,26 +15,67 @@ export default function VoiceSelector({
 	const [isOpen, setIsOpen] = useState(false)
 	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
 	const [isLoading, setIsLoading] = useState(true)
+	const [isSpeechAvailable, setIsSpeechAvailable] = useState(true)
 
 	useEffect(() => {
 		// Function to load voices
 		const loadVoices = () => {
-			const availableVoices = window.speechSynthesis.getVoices()
-			const englishVoices = availableVoices.filter(
-				voice => voice.lang.startsWith('en') || voice.lang.startsWith('en-')
-			)
-			setVoices(englishVoices)
-			setIsLoading(false)
+			try {
+				// Проверяем наличие Speech API
+				if (
+					!window.speechSynthesis ||
+					typeof window.speechSynthesis.getVoices !== 'function'
+				) {
+					console.warn(
+						'Speech Synthesis API not fully supported in this browser'
+					)
+					setIsSpeechAvailable(false)
+					setIsLoading(false)
+					return
+				}
+
+				const availableVoices = window.speechSynthesis.getVoices()
+				const englishVoices = availableVoices.filter(
+					voice => voice.lang.startsWith('en') || voice.lang.startsWith('en-')
+				)
+				setVoices(englishVoices)
+				setIsLoading(false)
+			} catch (e) {
+				console.error('Error loading voices:', e)
+				setIsSpeechAvailable(false)
+				setIsLoading(false)
+			}
 		}
 
 		// Load voices immediately if available
 		loadVoices()
 
-		// Listen for voiceschanged event
-		window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+		// Listen for voiceschanged event - with safeguards
+		try {
+			if (
+				window.speechSynthesis &&
+				'addEventListener' in window.speechSynthesis
+			) {
+				window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
 
-		return () => {
-			window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+				return () => {
+					try {
+						if (
+							window.speechSynthesis &&
+							'removeEventListener' in window.speechSynthesis
+						) {
+							window.speechSynthesis.removeEventListener(
+								'voiceschanged',
+								loadVoices
+							)
+						}
+					} catch (e) {
+						console.warn('Error removing voice event listener:', e)
+					}
+				}
+			}
+		} catch (e) {
+			console.warn('Error setting up voice event listeners:', e)
 		}
 	}, [])
 
@@ -45,6 +86,11 @@ export default function VoiceSelector({
 	const handleVoiceSelect = (voice: SpeechSynthesisVoice) => {
 		onVoiceSelect(voice)
 		setIsOpen(false)
+	}
+
+	// Если API недоступен, не показываем селектор
+	if (!isSpeechAvailable) {
+		return null
 	}
 
 	return (

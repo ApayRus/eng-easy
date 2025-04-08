@@ -34,14 +34,23 @@ const isSpeechSynthesisAvailable = () => {
 			try {
 				new SpeechSynthesisUtterance('Test') // Просто проверяем, можно ли создать объект
 
-				// Проверка доступности голосов
-				const voices = window.speechSynthesis.getVoices()
+				// Проверка доступности голосов - с дополнительными проверками
+				try {
+					// Проверяем наличие метода getVoices
+					if (typeof window.speechSynthesis.getVoices === 'function') {
+						const voices = window.speechSynthesis.getVoices()
 
-				// Логгируем результат для дебага
-				console.log(
-					'Speech API in Telegram: API available, voices count:',
-					voices ? voices.length : 0
-				)
+						// Логгируем результат для дебага
+						console.log(
+							'Speech API in Telegram: API available, voices count:',
+							voices ? voices.length : 0
+						)
+					} else {
+						console.warn('getVoices method is not available in this browser')
+					}
+				} catch (voiceError) {
+					console.warn('Error checking voices in Telegram:', voiceError)
+				}
 
 				// Даже если нет голосов сейчас, они могут загрузиться позже через событие voiceschanged
 				return true
@@ -54,13 +63,22 @@ const isSpeechSynthesisAvailable = () => {
 		// Дополнительная проверка - попытка получить голоса
 		if (hasAPI) {
 			// Некоторые браузеры возвращают пустой массив, если API не полностью поддерживается
-			const voices = window.speechSynthesis.getVoices()
+			try {
+				// Проверяем наличие метода getVoices
+				if (typeof window.speechSynthesis.getVoices === 'function') {
+					const voices = window.speechSynthesis.getVoices()
 
-			// В некоторых браузерах getVoices() может возвращаться асинхронно
-			// В этом случае мы будем считать, что API доступен, пока не доказано обратное
-			if (voices && voices.length === 0) {
-				// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
-				console.log('No voices available immediately, may load later')
+					// В некоторых браузерах getVoices() может возвращаться асинхронно
+					// В этом случае мы будем считать, что API доступен, пока не доказано обратное
+					if (voices && voices.length === 0) {
+						// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
+						console.log('No voices available immediately, may load later')
+					}
+				} else {
+					console.warn('getVoices method is not available in this browser')
+				}
+			} catch (e) {
+				console.warn('Error checking voices availability:', e)
 			}
 		}
 
@@ -90,31 +108,64 @@ export default function SpeechAvailabilityCheck() {
 			// Если API доступен, проверим еще и голоса
 			if (available) {
 				try {
+					// Проверяем наличие метода getVoices
+					if (typeof window.speechSynthesis.getVoices !== 'function') {
+						console.warn('getVoices method is not available in this browser')
+						return
+					}
+
 					// Попробуем загрузить голоса
 					const voices = window.speechSynthesis.getVoices()
 
 					// Если голоса недоступны сразу, подпишемся на событие изменения голосов
 					if (!voices || voices.length === 0) {
 						const checkVoices = () => {
-							const updatedVoices = window.speechSynthesis.getVoices()
-							if (updatedVoices && updatedVoices.length > 0) {
-								setSpeechAvailable(true)
+							try {
+								if (typeof window.speechSynthesis.getVoices !== 'function') {
+									return
+								}
+
+								const updatedVoices = window.speechSynthesis.getVoices()
+								if (updatedVoices && updatedVoices.length > 0) {
+									setSpeechAvailable(true)
+								}
+							} catch (e) {
+								console.warn('Error in checkVoices:', e)
 							}
 						}
 
-						window.speechSynthesis.addEventListener(
-							'voiceschanged',
-							checkVoices
-						)
+						try {
+							// Проверяем наличие addEventListener
+							if (
+								window.speechSynthesis &&
+								'addEventListener' in window.speechSynthesis
+							) {
+								window.speechSynthesis.addEventListener(
+									'voiceschanged',
+									checkVoices
+								)
 
-						// Попробуем еще раз через таймаут, на случай если событие не сработает
-						setTimeout(checkVoices, 1000)
+								// Попробуем еще раз через таймаут, на случай если событие не сработает
+								setTimeout(checkVoices, 1000)
 
-						return () => {
-							window.speechSynthesis.removeEventListener(
-								'voiceschanged',
-								checkVoices
-							)
+								return () => {
+									try {
+										if (
+											window.speechSynthesis &&
+											'removeEventListener' in window.speechSynthesis
+										) {
+											window.speechSynthesis.removeEventListener(
+												'voiceschanged',
+												checkVoices
+											)
+										}
+									} catch (e) {
+										console.warn('Error removing voice event listener:', e)
+									}
+								}
+							}
+						} catch (e) {
+							console.warn('Error setting up voice event listeners:', e)
 						}
 					}
 				} catch (e) {

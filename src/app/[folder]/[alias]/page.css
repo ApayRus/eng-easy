@@ -109,24 +109,68 @@ main {
 	padding-top: 56px; /* Равно высоте верхней панели */
 }
 
-.next-lesson-button {
+/* Navigation buttons container */
+.nav-buttons {
 	margin-top: 2rem;
 	margin-bottom: 2rem;
 	display: flex;
-	justify-content: center;
+	justify-content: space-between;
+	max-width: 65ch;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 0 1rem;
 }
 
+/* Previous lesson button */
+.prev-lesson-button .custom-button {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	font-size: 0.875rem;
+	background-color: var(--primary) !important;
+	color: white !important;
+	border: none;
+	transition: background-color 0.2s;
+	box-shadow: none;
+	margin: 0;
+}
+
+.prev-lesson-button .custom-button:hover {
+	background-color: var(--primary-dark) !important;
+	color: white !important;
+	box-shadow: none;
+}
+
+/* Next lesson button */
 .next-lesson-button .custom-button {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	padding: 0.75rem 1.5rem;
-	font-size: 1.125rem;
+	padding: 0.5rem 1rem;
+	font-size: 0.875rem;
+	background-color: var(--primary) !important;
+	color: white !important;
+	border: none;
+	transition: background-color 0.2s;
+	box-shadow: none;
+	margin: 0;
 }
 
+.next-lesson-button .custom-button:hover {
+	background-color: var(--primary-dark) !important;
+	color: white !important;
+	box-shadow: none;
+}
+
+/* Chevron icon styles */
 .chevron-icon {
-	width: 1.25rem;
-	height: 1.25rem;
+	width: 1rem;
+	height: 1rem;
+}
+
+.chevron-left {
+	margin-right: 0.25rem;
 }
 
 /* Remove old bottom navigation styles */

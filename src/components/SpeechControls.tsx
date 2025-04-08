@@ -7,6 +7,21 @@ import './SpeechControls.css'
 // Проверка доступности браузерного API
 const isBrowser = () => typeof window !== 'undefined'
 
+// Проверка доступности Web Speech API
+const isSpeechSynthesisAvailable = () => {
+	try {
+		return (
+			isBrowser() &&
+			'speechSynthesis' in window &&
+			'SpeechSynthesisUtterance' in window &&
+			typeof window.speechSynthesis.getVoices === 'function'
+		)
+	} catch (e) {
+		console.error('Error checking speech synthesis:', e)
+		return false
+	}
+}
+
 // Создаем глобальные переменные для хранения скорости речи и голоса
 let globalSpeechRate = 1.0
 let globalVoice: SpeechSynthesisVoice | null = null
@@ -50,9 +65,14 @@ export default function SpeechControls() {
 		null
 	)
 	const [isClient, setIsClient] = useState(false)
+	const [isSpeechAvailable, setIsSpeechAvailable] = useState(true)
 
 	useEffect(() => {
 		setIsClient(true)
+
+		// Проверяем доступность Speech API
+		setIsSpeechAvailable(isSpeechSynthesisAvailable())
+
 		// Проверяем, есть ли сохраненное значение в localStorage
 		const savedRate = safeLocalStorage.getItem('speechRate')
 		if (savedRate) {
@@ -78,8 +98,8 @@ export default function SpeechControls() {
 		safeLocalStorage.setItem('selectedVoice', voice.name)
 	}
 
-	if (!isClient) {
-		return null // Не рендерим на сервере
+	if (!isClient || !isSpeechAvailable) {
+		return null // Не рендерим на сервере или если API недоступен
 	}
 
 	return (

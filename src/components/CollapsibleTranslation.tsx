@@ -12,6 +12,27 @@ export default function CollapsibleTranslation({
 }: CollapsibleTranslationProps) {
 	const [isExpanded, setIsExpanded] = useState(false)
 
+	// Function to format content and highlight text after the slash
+	const formatContent = (text: string) => {
+		// Split the text by lines
+		const lines = text.split('\n')
+
+		return lines
+			.map(line => {
+				// Split each line by the forward slash
+				if (line.includes(' / ')) {
+					const [beforeSlash, afterSlash] = line.split(' / ', 2)
+
+					// Return the formatted HTML with different classes
+					return `<span class="${styles.translationPrimary}">${beforeSlash}</span> / <span class="${styles.translationSecondary}">${afterSlash}</span>`
+				}
+
+				// Return the line unchanged if no slash
+				return line
+			})
+			.join('\n')
+	}
+
 	return (
 		<div className={styles.translationBlock}>
 			{!isExpanded ? (
@@ -58,7 +79,7 @@ export default function CollapsibleTranslation({
 					</button>
 					<div
 						className={styles.translationContent}
-						dangerouslySetInnerHTML={{ __html: content }}
+						dangerouslySetInnerHTML={{ __html: formatContent(content) }}
 					/>
 				</div>
 			)}
