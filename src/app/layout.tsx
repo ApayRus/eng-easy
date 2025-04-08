@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import '../styles/audioComponents.css'
 const geistSans = Geist({
@@ -70,13 +71,34 @@ export default function RootLayout({
 	return (
 		<html lang='ru' suppressHydrationWarning>
 			<head>
-				{/* Eruda будет загружен на всех страницах */}
-				{process.env.NODE_ENV === 'development' && (
-					<>
-						<script src='//cdn.jsdelivr.net/npm/eruda' />
-						<script dangerouslySetInnerHTML={{ __html: 'eruda.init();' }} />
-					</>
-				)}
+				{/* Eruda будет загружен всегда, но активирован только по условию */}
+				<Script
+					src='//cdn.jsdelivr.net/npm/eruda'
+					strategy='beforeInteractive'
+				/>
+				<Script id='eruda-init' strategy='afterInteractive'>
+					{`
+					// Инициализируем Eruda только если:
+					// 1. В URL есть параметр debug=true ИЛИ
+					// 2. Находимся в браузере Telegram
+					(function() {
+						try {
+							const urlParams = new URLSearchParams(window.location.search);
+							const isDebug = urlParams.get('debug') === 'true';
+							const userAgent = navigator.userAgent;
+							const isTelegramWebView = userAgent.includes('Telegram') || 
+								userAgent.includes('TelegramWebView');
+							
+							if (isDebug || isTelegramWebView) {
+								console.log('Debug mode activated');
+								eruda.init();
+							}
+						} catch (e) {
+							console.error('Error initializing debug tools:', e);
+						}
+					})();
+					`}
+				</Script>
 			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable}`}
