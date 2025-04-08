@@ -18,67 +18,42 @@ const isSpeechSynthesisAvailable = () => {
 				userAgent.includes('Telegram') ||
 				userAgent.includes('TelegramWebView'))
 
+		// Telegram WebView всегда считаем недоступным для озвучивания,
+		// даже если есть заглушки для API
+		if (isTelegramWebView) {
+			console.log(
+				'Telegram WebView detected, treating speech synthesis as unavailable'
+			)
+			return false
+		}
+
 		// Основная проверка доступности API
 		const hasAPI =
 			typeof window !== 'undefined' &&
 			'speechSynthesis' in window &&
 			'SpeechSynthesisUtterance' in window
 
-		// Если Telegram WebView, то проведем дополнительные проверки вместо полного блокирования
-		if (isTelegramWebView && hasAPI) {
-			console.log(
-				'Telegram WebView detected, testing speech synthesis availability'
-			)
-
-			// Попробуем создать объект SpeechSynthesisUtterance и получить список голосов
-			try {
-				new SpeechSynthesisUtterance('Test') // Просто проверяем, можно ли создать объект
-
-				// Проверка доступности голосов - с дополнительными проверками
-				try {
-					// Проверяем наличие метода getVoices
-					if (typeof window.speechSynthesis.getVoices === 'function') {
-						const voices = window.speechSynthesis.getVoices()
-
-						// Логгируем результат для дебага
-						console.log(
-							'Speech API in Telegram: API available, voices count:',
-							voices ? voices.length : 0
-						)
-					} else {
-						console.warn('getVoices method is not available in this browser')
-					}
-				} catch (voiceError) {
-					console.warn('Error checking voices in Telegram:', voiceError)
-				}
-
-				// Даже если нет голосов сейчас, они могут загрузиться позже через событие voiceschanged
-				return true
-			} catch (e) {
-				console.warn('Speech API testing in Telegram failed:', e)
-				return false
-			}
-		}
-
 		// Дополнительная проверка - попытка получить голоса
 		if (hasAPI) {
 			// Некоторые браузеры возвращают пустой массив, если API не полностью поддерживается
 			try {
 				// Проверяем наличие метода getVoices
-				if (typeof window.speechSynthesis.getVoices === 'function') {
-					const voices = window.speechSynthesis.getVoices()
-
-					// В некоторых браузерах getVoices() может возвращаться асинхронно
-					// В этом случае мы будем считать, что API доступен, пока не доказано обратное
-					if (voices && voices.length === 0) {
-						// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
-						console.log('No voices available immediately, may load later')
-					}
-				} else {
+				if (typeof window.speechSynthesis.getVoices !== 'function') {
 					console.warn('getVoices method is not available in this browser')
+					return false
+				}
+
+				const voices = window.speechSynthesis.getVoices()
+
+				// В некоторых браузерах getVoices() может возвращаться асинхронно
+				// В этом случае мы будем считать, что API доступен, пока не доказано обратное
+				if (voices && voices.length === 0) {
+					// Логируем, но все равно разрешаем (голоса могут загрузиться позже)
+					console.log('No voices available immediately, may load later')
 				}
 			} catch (e) {
 				console.warn('Error checking voices availability:', e)
+				return false
 			}
 		}
 
@@ -90,23 +65,46 @@ const isSpeechSynthesisAvailable = () => {
 }
 
 /**
+ * Проверка на Telegram WebView
+ */
+const isTelegramWebViewBrowser = () => {
+	try {
+		const userAgent =
+			typeof navigator !== 'undefined' ? navigator.userAgent : ''
+		return (
+			typeof window !== 'undefined' &&
+			(window.IS_TELEGRAM_WEBAPP === true ||
+				userAgent.includes('Telegram') ||
+				userAgent.includes('TelegramWebView'))
+		)
+	} catch (e) {
+		console.error('Error checking Telegram WebView:', e)
+		return false
+	}
+}
+
+/**
  * Компонент для проверки доступности речевого синтеза
  * Отображает предупреждение, если озвучивание недоступно
  */
 export default function SpeechAvailabilityCheck() {
 	const [isClient, setIsClient] = useState(false)
 	const [speechAvailable, setSpeechAvailable] = useState(true) // Изначально true, чтобы не мигало при загрузке
+	const [isTelegramWebView, setIsTelegramWebView] = useState(false)
 
 	useEffect(() => {
 		setIsClient(true)
+
+		// Проверка на Telegram WebView
+		setIsTelegramWebView(isTelegramWebViewBrowser())
 
 		// Проверка доступности API только на клиенте
 		if (typeof window !== 'undefined') {
 			const available = isSpeechSynthesisAvailable()
 			setSpeechAvailable(available)
 
-			// Если API доступен, проверим еще и голоса
-			if (available) {
+			// Если API доступен (и это не Telegram), проверим еще и голоса
+			if (available && !isTelegramWebViewBrowser()) {
 				try {
 					// Проверяем наличие метода getVoices
 					if (typeof window.speechSynthesis.getVoices !== 'function') {
@@ -181,12 +179,17 @@ export default function SpeechAvailabilityCheck() {
 		return null
 	}
 
-	// Если озвучивание доступно, также ничего не рендерим
-	if (speechAvailable) {
+	// Если озвучивание доступно и это не Telegram WebView, ничего не рендерим
+	if (speechAvailable && !isTelegramWebView) {
 		return null
 	}
 
-	// Рендерим предупреждение только если озвучивание недоступно
+	// Особое сообщение для Telegram WebView
+	const message = isTelegramWebView
+		? 'В браузере Telegram озвучивание не работает. Откройте в Chrome или другом браузере.'
+		: 'Озвучивание не работает. Откройте страницу в другом браузере.'
+
+	// Рендерим предупреждение
 	return (
 		<div className='speech-warning-banner' data-speech-warning='true'>
 			<div className='warning-content'>
@@ -205,9 +208,7 @@ export default function SpeechAvailabilityCheck() {
 					<line x1='12' y1='9' x2='12' y2='13'></line>
 					<line x1='12' y1='17' x2='12.01' y2='17'></line>
 				</svg>
-				<span>
-					Озвучивание не работает. Откройте страницу в другом браузере
-				</span>
+				<span>{message}</span>
 			</div>
 		</div>
 	)
