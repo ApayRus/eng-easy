@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import VoiceSelector from './VoiceSelector'
 import './SpeechControls.css'
 
 // Проверка доступности браузерного API
 const isBrowser = () => typeof window !== 'undefined'
 
-// Создаем глобальную переменную для хранения скорости речи
-// Таким образом, значение будет доступно для всех компонентов
+// Создаем глобальные переменные для хранения скорости речи и голоса
 let globalSpeechRate = 1.0
+let globalVoice: SpeechSynthesisVoice | null = null
 
 // Безопасная функция для работы с localStorage
 const safeLocalStorage = {
@@ -34,13 +35,20 @@ const safeLocalStorage = {
 	}
 }
 
-// Экспортируем функцию для получения текущей скорости речи
+// Экспортируем функции для получения текущей скорости речи и голоса
 export function getSpeechRate(): number {
 	return globalSpeechRate
 }
 
+export function getCurrentVoice(): SpeechSynthesisVoice | null {
+	return globalVoice
+}
+
 export default function SpeechControls() {
 	const [speechRate, setSpeechRate] = useState(1.0)
+	const [currentVoice, setCurrentVoice] = useState<SpeechSynthesisVoice | null>(
+		null
+	)
 	const [isClient, setIsClient] = useState(false)
 
 	useEffect(() => {
@@ -63,14 +71,24 @@ export default function SpeechControls() {
 		safeLocalStorage.setItem('speechRate', newRate.toString())
 	}
 
+	const handleVoiceSelect = (voice: SpeechSynthesisVoice) => {
+		setCurrentVoice(voice)
+		globalVoice = voice
+		// Сохраняем выбранный голос
+		safeLocalStorage.setItem('selectedVoice', voice.name)
+	}
+
 	if (!isClient) {
 		return null // Не рендерим на сервере
 	}
 
 	return (
 		<div className='speech-controls'>
+			<VoiceSelector
+				currentVoice={currentVoice}
+				onVoiceSelect={handleVoiceSelect}
+			/>
 			<div className='speech-rate-wrapper'>
-				<div className='speech-rate-label'>Скорость</div>
 				<div className='speech-rate-control'>
 					<input
 						type='range'
@@ -81,7 +99,7 @@ export default function SpeechControls() {
 						value={speechRate}
 						onChange={handleRateChange}
 					/>
-					<div className='speech-rate-value'>{speechRate.toFixed(1)}</div>
+					<div className='speech-rate-value'>x{speechRate.toFixed(1)}</div>
 				</div>
 			</div>
 		</div>

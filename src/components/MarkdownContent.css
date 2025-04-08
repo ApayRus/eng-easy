@@ -375,7 +375,8 @@
 
 /* AudioTextBlock styles */
 .audio-text-block {
-	margin-bottom: 2rem;
+	margin-bottom: 1rem;
+	margin-top: 2rem;
 	padding: 1rem;
 	background-color: var(--card-bg);
 	border-radius: 0.5rem;

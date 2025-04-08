@@ -6,16 +6,16 @@
 }
 
 .top-bar {
-	padding: 10px 10px 10px 15px; /* Уменьшенный правый отступ */
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background-color: var(--card-bg);
+	padding: 10px 10px 10px 15px;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	border-bottom: 1px solid var(--border);
-	height: 56px; /* Уменьшенная высота для верхней панели */
-	background-color: var(--card-bg);
-	position: sticky;
-	top: 0;
-	z-index: 10;
+	height: 56px;
 }
 
 .home-link {

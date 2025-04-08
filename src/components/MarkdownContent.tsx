@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react'
 import AudioTextBlock from './AudioTextBlock'
+import CollapsibleTranslation from './CollapsibleTranslation'
 import './MarkdownContent.css'
 
 interface MarkdownContentProps {
@@ -9,64 +10,27 @@ interface MarkdownContentProps {
 }
 
 // Types of text blocks we can identify
-type TextBlockType =
-	| 'audio'
-	| 'list'
-	| 'paragraph'
-	| 'heading'
-	| 'code'
-	| 'quote'
+type TextBlockType = 'audio' | 'translation'
 
-// Function to determine the type of a text block
-function determineBlockType(lines: string[]): TextBlockType {
-	// If it's empty, it's a paragraph
-	if (lines.length === 0) {
-		return 'paragraph'
+// Function to determine the type of a block
+function determineBlockType(lines: string[], title?: string): TextBlockType {
+	// Debug logging
+	console.log(
+		'Determining block type for lines:',
+		lines.slice(0, 2),
+		'title:',
+		title
+	)
+
+	// Check if current block's title is "Перевод"
+	if (title === 'Перевод') {
+		console.log('Block type: TRANSLATION')
+		return 'translation'
 	}
 
-	// Check if it's a heading
-	if (lines[0].trim().startsWith('#')) {
-		return 'heading'
-	}
-
-	// Check if it's a code block
-	if (lines.some(line => line.trim().startsWith('```'))) {
-		return 'code'
-	}
-
-	// Check if it's a list
-	if (lines.some(line => /^[\s-]*[-*+]\s/.test(line))) {
-		return 'list'
-	}
-
-	// Check if it's a quote
-	if (lines.some(line => line.trim().startsWith('>'))) {
-		return 'quote'
-	}
-
-	// Check if it's an audio block - improved detection
-	if (
-		// Multiple lines with sentence structure
-		(lines.length > 1 &&
-			lines.every(line => {
-				const trimmedLine = line.trim()
-				return (
-					trimmedLine === '' || // Allow empty lines
-					// Sentence format: starts with capital letter
-					/^[A-Z]/.test(trimmedLine)
-				)
-			})) ||
-		// Format with slashes detection
-		lines.some(line => {
-			const trimmedLine = line.trim()
-			return (trimmedLine.match(/\s\/\s/g) || []).length >= 2
-		})
-	) {
-		return 'audio'
-	}
-
-	// Default to paragraph
-	return 'paragraph'
+	// Default to audio block
+	console.log('Block type: AUDIO')
+	return 'audio'
 }
 
 // Process markdown content to handle formatting
@@ -99,51 +63,6 @@ function renderBlock(
 	const key = `${type}-${content.substring(0, 20).replace(/\s+/g, '-')}`
 
 	switch (type) {
-		case 'heading':
-			const headingMatch = content.match(/^(#+)\s+(.+)$/m)
-			if (headingMatch) {
-				const level = headingMatch[1].length
-				const text = headingMatch[2]
-
-				if (level === 1) {
-					return (
-						<h1 key={key} className='heading-1 mb-4'>
-							{text}
-						</h1>
-					)
-				} else if (level === 2) {
-					return (
-						<h2 key={key} className='heading-2 mb-4'>
-							{text}
-						</h2>
-					)
-				} else if (level === 3) {
-					return (
-						<h3 key={key} className='heading-3 mb-4'>
-							{text}
-						</h3>
-					)
-				} else if (level === 4) {
-					return (
-						<h4 key={key} className='heading-4 mb-4'>
-							{text}
-						</h4>
-					)
-				} else if (level === 5) {
-					return (
-						<h5 key={key} className='heading-5 mb-4'>
-							{text}
-						</h5>
-					)
-				} else {
-					return (
-						<h6 key={key} className='heading-6 mb-4'>
-							{text}
-						</h6>
-					)
-				}
-			}
-			return null
 		case 'audio':
 			return (
 				<AudioTextBlock
@@ -152,52 +71,11 @@ function renderBlock(
 					sectionTitle={props.title}
 				/>
 			)
-		case 'list':
+		case 'translation':
 			return (
-				<ul key={key} className='list-disc pl-6 my-4'>
-					{content.split('\n').map((item, index) => {
-						if (!item.trim()) return null
-						const processedItem = processMarkdownText(
-							item.replace(/^[\s-]*[-*+]\s/, '')
-						)
-						return (
-							<li
-								key={`${key}-${index}`}
-								className='mb-2'
-								dangerouslySetInnerHTML={{ __html: processedItem }}
-							/>
-						)
-					})}
-				</ul>
-			)
-		case 'code':
-			return (
-				<pre
+				<CollapsibleTranslation
 					key={key}
-					className='bg-gray-100 p-4 rounded-md overflow-x-auto my-4'
-				>
-					<code>{content.replace(/```.*\n/, '').replace(/```$/, '')}</code>
-				</pre>
-			)
-		case 'quote':
-			return (
-				<blockquote
-					key={key}
-					className='border-l-4 border-gray-300 pl-4 italic my-4'
-				>
-					{content.split('\n').map((line, index) => (
-						<p key={`${key}-${index}`} className='mb-2'>
-							{line.replace(/^>\s*/, '')}
-						</p>
-					))}
-				</blockquote>
-			)
-		default:
-			return (
-				<p
-					key={key}
-					className='paragraph my-4'
-					dangerouslySetInnerHTML={{ __html: processMarkdownText(content) }}
+					content={processMarkdownText(content)}
 				/>
 			)
 	}
@@ -279,12 +157,21 @@ export default function MarkdownContent({
 	// Parse the section into blocks
 	const blocks = parseMarkdownToBlocks(activeSection)
 
+	// Debug logging for blocks
+	console.log(
+		'Parsed blocks:',
+		blocks.map(block => ({
+			title: block.title,
+			content: block.content.join('\n').substring(0, 50) + '...'
+		}))
+	)
+
 	// Render all blocks
 	return (
 		<div className='markdown-content'>
 			{blocks.map((block, blockIndex) => {
 				const blockContent = block.content.join('\n')
-				const blockType = determineBlockType(block.content)
+				const blockType = determineBlockType(block.content, block.title)
 				return (
 					<React.Fragment key={`block-${blockIndex}`}>
 						{renderBlock(blockContent, blockType, {
