@@ -105,20 +105,7 @@ function parseMarkdownToBlocks(content: string): ContentBlock[] {
 			continue
 		}
 
-		// Empty line means end of the current block
-		if (line.trim() === '') {
-			if (currentBlock.length > 0) {
-				blocks.push({
-					content: [...currentBlock],
-					title: currentTitle
-				})
-				currentBlock = []
-				currentTitle = undefined
-			}
-			continue
-		}
-
-		// Otherwise add to the current block
+		// Add the line to the current block (including empty lines)
 		currentBlock.push(line)
 	}
 
@@ -130,7 +117,7 @@ function parseMarkdownToBlocks(content: string): ContentBlock[] {
 		})
 	}
 
-	return blocks
+	return blocks.slice(1)
 }
 
 // Main component for rendering markdown content

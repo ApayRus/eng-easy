@@ -3,8 +3,9 @@ import path from 'path'
 
 interface MDMeta {
 	alias: string
+	order?: number
 	title?: string
-	[key: string]: string | undefined
+	[key: string]: string | number | undefined
 }
 
 interface MDContent {
@@ -37,7 +38,12 @@ export function parseMD(fileContent: string): MDContent {
 			frontmatter.split('\n').forEach(line => {
 				const [key, value] = line.split(':').map(part => part.trim())
 				if (key && value) {
-					meta[key] = value
+					// Convert order to number
+					if (key === 'order') {
+						meta[key] = parseInt(value, 10)
+					} else {
+						meta[key] = value
+					}
 				}
 			})
 		}
@@ -46,17 +52,17 @@ export function parseMD(fileContent: string): MDContent {
 	return { meta, content }
 }
 
-// Function to get all markdown files in a folder with their alias
+// Function to get all markdown files in a folder with their alias and order
 export function getMDFilesWithAlias(
 	folder: string
-): { slug: string; alias: string }[] {
+): { slug: string; alias: string; order: number }[] {
 	const folderPath = path.join(process.cwd(), 'content', folder)
 
 	if (!fs.existsSync(folderPath)) {
 		return []
 	}
 
-	return fs
+	const files = fs
 		.readdirSync(folderPath)
 		.filter(file => file.endsWith('.md'))
 		.map(file => {
@@ -64,9 +70,13 @@ export function getMDFilesWithAlias(
 			const { meta } = parseMD(fileContent)
 			return {
 				slug: file.replace('.md', ''),
-				alias: meta.alias || file.replace('.md', '')
+				alias: meta.alias || file.replace('.md', ''),
+				order: meta.order ? Number(meta.order) : 0
 			}
 		})
+
+	// Sort files by order field
+	return files.sort((a, b) => a.order - b.order)
 }
 
 // Function to get a specific markdown file by its alias
@@ -89,6 +99,38 @@ export function getMDByAlias(folder: string, alias: string): MDContent | null {
 	}
 
 	return null
+}
+
+// Function to get next and previous lessons by order
+export function getNextAndPrevLessons(
+	folder: string,
+	currentAlias: string
+): {
+	nextLesson: { alias: string; order: number } | null
+	prevLesson: { alias: string; order: number } | null
+} {
+	const lessons = getMDFilesWithAlias(folder)
+	const currentLesson = lessons.find(lesson => lesson.alias === currentAlias)
+
+	if (!currentLesson) {
+		return { nextLesson: null, prevLesson: null }
+	}
+
+	const currentIndex = lessons.findIndex(
+		lesson => lesson.alias === currentAlias
+	)
+	const nextLesson =
+		currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
+	const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null
+
+	return {
+		nextLesson: nextLesson
+			? { alias: nextLesson.alias, order: nextLesson.order }
+			: null,
+		prevLesson: prevLesson
+			? { alias: prevLesson.alias, order: prevLesson.order }
+			: null
+	}
 }
 
 // Function to get all aliases for a folder

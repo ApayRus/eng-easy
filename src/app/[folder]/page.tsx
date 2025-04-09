@@ -35,7 +35,10 @@ export default async function FolderPage({ params }: PageProps) {
 	const lessons = mdFiles.map(file => {
 		const content = getMDByAlias(folder, file.alias)
 		const titleMatch = content?.content.match(/^#\s+(.+)$/m)
-		return { ...file, title: titleMatch ? titleMatch[1] : '' }
+		return {
+			...file,
+			title: titleMatch ? titleMatch[1] : `Lesson ${file.order}`
+		}
 	})
 
 	return (

@@ -12,14 +12,17 @@ export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url)
 	const languages = searchParams.get('languages')?.split(',') || ['en']
 
-	// Получаем все уроки
+	// Получаем все уроки, отсортированные по полю order
 	const lessons = getMDFilesWithAlias('lessons')
 	// Получаем заголовки для каждого урока
 	const lessonItems = lessons.map(lesson => {
 		const content = getMDByAlias('lessons', lesson.alias)
 		const titleMatch = content?.content.match(/^#\s+(.+)$/m)
-		const title = titleMatch ? titleMatch[1] : `Lesson ${lesson.alias}`
-		return { ...lesson, title }
+		const title = titleMatch ? titleMatch[1] : `Lesson ${lesson.order}`
+		return {
+			...lesson,
+			title
+		}
 	})
 
 	// Получаем папки info вручную

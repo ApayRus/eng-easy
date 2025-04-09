@@ -375,33 +375,40 @@
 
 /* AudioTextBlock styles */
 .audio-text-block {
-	margin-bottom: 1rem;
-	margin-top: 2rem;
+	margin-bottom: 2rem;
 	padding: 1rem;
+	border-radius: 8px;
 	background-color: var(--card-bg);
-	border-radius: 0.5rem;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 	border: 1px solid var(--border);
+	position: relative;
 }
 
 .audio-text-block .section-title {
 	font-size: 1.25rem;
 	font-weight: 600;
 	margin-bottom: 1rem;
-	color: var(--secondary);
-	border-bottom: 2px solid var(--border);
-	padding-bottom: 0.5rem;
+	color: var(--foreground);
+	text-align: center;
 }
 
 .audio-text-block .sentence-block {
-	/* margin-bottom: 0.75rem; */
+	margin-bottom: 0.75rem;
+}
+
+.paragraph-block {
+	margin-bottom: 1.5rem;
+}
+
+.paragraph-block:last-child {
+	margin-bottom: 0;
 }
 
 .section-title {
 	font-size: 1.25rem;
 	font-weight: 600;
-	margin-bottom: 1rem;
-	color: var(--secondary);
+	margin: 2rem 0 1rem;
+	color: var(--foreground);
 }
 
 .english-lines {

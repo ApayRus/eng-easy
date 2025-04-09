@@ -8,42 +8,53 @@ interface BottomNavigationProps {
 	currentLesson: string
 }
 
+interface NavigationState {
+	nextLesson: string | null
+	prevLesson: string | null
+	isLastLesson: boolean
+}
+
 export default function BottomNavigation({
 	currentLesson
 }: BottomNavigationProps) {
-	// Convert current lesson to number and calculate next/previous lesson
-	const currentLessonNum = parseInt(currentLesson)
-	const nextLesson = currentLessonNum + 1
-	const prevLesson = currentLessonNum > 1 ? currentLessonNum - 1 : null
+	// State to track navigation options
+	const [navigation, setNavigation] = useState<NavigationState>({
+		nextLesson: null,
+		prevLesson: null,
+		isLastLesson: false
+	})
 
-	// State to track if this is the last lesson
-	const [isLastLesson, setIsLastLesson] = useState(false)
-
-	// Check if this is the last lesson by fetching lesson data
+	// Fetch next and previous lessons based on order
 	useEffect(() => {
-		async function checkLastLesson() {
+		async function fetchNavigation() {
 			try {
-				const response = await fetch('/api/content')
+				const response = await fetch(
+					`/api/lessons/navigation?current=${currentLesson}`
+				)
 				if (response.ok) {
 					const data = await response.json()
-					if (data.lessons && data.lessons.length > 0) {
-						// Set isLastLesson to true if current lesson is the last one
-						setIsLastLesson(currentLessonNum >= data.lessons.length)
-					}
+					setNavigation({
+						nextLesson: data.nextLesson?.alias || null,
+						prevLesson: data.prevLesson?.alias || null,
+						isLastLesson: !data.nextLesson
+					})
 				}
 			} catch (error) {
-				console.error('Error checking last lesson:', error)
+				console.error('Error fetching navigation:', error)
 			}
 		}
 
-		checkLastLesson()
-	}, [currentLessonNum])
+		fetchNavigation()
+	}, [currentLesson])
 
 	return (
 		<div className='nav-buttons'>
 			{/* Previous lesson button or empty div for spacing */}
-			{prevLesson ? (
-				<Link href={`/lessons/${prevLesson}`} className='prev-lesson-button'>
+			{navigation.prevLesson ? (
+				<Link
+					href={`/lessons/${navigation.prevLesson}`}
+					className='prev-lesson-button'
+				>
 					<CustomButton>
 						<svg
 							xmlns='http://www.w3.org/2000/svg'
@@ -67,8 +78,11 @@ export default function BottomNavigation({
 			)}
 
 			{/* Next lesson button or empty div for spacing */}
-			{!isLastLesson ? (
-				<Link href={`/lessons/${nextLesson}`} className='next-lesson-button'>
+			{navigation.nextLesson ? (
+				<Link
+					href={`/lessons/${navigation.nextLesson}`}
+					className='next-lesson-button'
+				>
 					<CustomButton>
 						Дальше
 						<svg
